@@ -1,0 +1,16 @@
+{
+  "name": "ims",
+  "version": "1.0.0",
+  "description": "Backend of Inventory Management System",
+  "keywords": [],
+  "license": "ISC",
+  "author": "Karthik Emani, Siddhant Das and Pawan Malhi",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
