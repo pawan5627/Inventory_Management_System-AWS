@@ -1,10 +1,14 @@
 import { useState } from 'react';
+import { SuccessBanner, ErrorBanner } from '../common/banner';
 
 export default function Login({ onNavigate }) {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+  const [showErrorBanner, setShowErrorBanner] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const validateForm = () => {
     const newErrors = {};
@@ -37,16 +41,39 @@ export default function Login({ onNavigate }) {
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
       console.log('Login successful:', formData);
-      alert('Login successful! Welcome to your Inventory Management System');
+      setShowSuccessBanner(true);
     } catch (error) {
-      setErrors({ submit: 'Invalid credentials. Please try again.' });
+      setErrorMessage('Invalid credentials. Please try again.');
+      setShowErrorBanner(true);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleCloseBanner = () => {
+    setShowSuccessBanner(false);
+    // In real app: navigate to dashboard
+    console.log('Redirecting to dashboard...');
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+      {showSuccessBanner && (
+        <SuccessBanner 
+          message="Login successful! Redirecting to dashboard..."
+          onClose={handleCloseBanner}
+          autoRedirect={true}
+          redirectDelay={3000}
+        />
+      )}
+      
+      {showErrorBanner && (
+        <ErrorBanner 
+          message={errorMessage}
+          onClose={() => setShowErrorBanner(false)}
+        />
+      )}
+
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-indigo-600 rounded-lg flex items-center justify-center">
@@ -59,12 +86,6 @@ export default function Login({ onNavigate }) {
         </div>
 
         <div className="mt-8 space-y-6">
-          {errors.submit && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-              {errors.submit}
-            </div>
-          )}
-
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SuccessBanner, ErrorBanner } from '../common/banner';
 
 export default function SignUp({ onNavigate }) {
   const [formData, setFormData] = useState({
@@ -16,8 +17,8 @@ export default function SignUp({ onNavigate }) {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
+  const [showErrorBanner, setShowErrorBanner] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   
   // Mock groups - in production, fetch from backend
@@ -102,30 +103,42 @@ export default function SignUp({ onNavigate }) {
       
       if (isSuccess) {
         console.log('User created successfully:', formData);
-        setShowSuccessModal(true);
+        setShowSuccessBanner(true);
       } else {
         throw new Error('Backend error occurred');
       }
     } catch (error) {
       console.error('User creation failed:', error);
       setErrorMessage('Failed to create user. Please try again or contact support.');
-      setShowErrorModal(true);
+      setShowErrorBanner(true);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleCloseSuccessModal = () => {
-    setShowSuccessModal(false);
+  const handleCloseSuccessBanner = () => {
+    setShowSuccessBanner(false);
     onNavigate('login');
-  };
-
-  const handleCloseErrorModal = () => {
-    setShowErrorModal(false);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-12">
+      {showSuccessBanner && (
+        <SuccessBanner 
+          message="User account created successfully! Redirecting to login..."
+          onClose={handleCloseSuccessBanner}
+          autoRedirect={true}
+          redirectDelay={3000}
+        />
+      )}
+      
+      {showErrorBanner && (
+        <ErrorBanner 
+          message={errorMessage}
+          onClose={() => setShowErrorBanner(false)}
+        />
+      )}
+
       <div className="max-w-4xl w-full bg-white p-8 rounded-xl shadow-lg">
         <div className="text-center mb-8">
           <div className="mx-auto h-12 w-12 bg-indigo-600 rounded-lg flex items-center justify-center">
@@ -436,54 +449,6 @@ export default function SignUp({ onNavigate }) {
           </div>
         </div>
       </div>
-
-      {/* Success Modal */}
-      {showSuccessModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 transform transition-all">
-            <div className="text-center">
-              <div className="mx-auto h-16 w-16 bg-green-100 rounded-full flex items-center justify-center">
-                <svg className="h-10 w-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h3 className="mt-4 text-xl font-bold text-gray-900">User Creation Successful!</h3>
-              <p className="mt-2 text-gray-600">
-                The user account has been created successfully. You can now sign in with the credentials.
-              </p>
-              <button
-                onClick={handleCloseSuccessModal}
-                className="mt-6 w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition"
-              >
-                Go to Sign In
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Error Modal */}
-      {showErrorModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 transform transition-all">
-            <div className="text-center">
-              <div className="mx-auto h-16 w-16 bg-red-100 rounded-full flex items-center justify-center">
-                <svg className="h-10 w-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </div>
-              <h3 className="mt-4 text-xl font-bold text-gray-900">User Creation Failed</h3>
-              <p className="mt-2 text-gray-600">{errorMessage}</p>
-              <button
-                onClick={handleCloseErrorModal}
-                className="mt-6 w-full py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition"
-              >
-                Try Again
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
