@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { SuccessBanner, ErrorBanner } from '../common/banner';
 
-export default function Login({ onNavigate }) {
+export default function Login({ onNavigate, onLogin }) {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -53,7 +53,9 @@ export default function Login({ onNavigate }) {
   const handleCloseBanner = () => {
     setShowSuccessBanner(false);
     // In real app: navigate to dashboard
-    console.log('Redirecting to dashboard...');
+    if (onLogin) {
+      onLogin();
+    }
   };
 
   return (

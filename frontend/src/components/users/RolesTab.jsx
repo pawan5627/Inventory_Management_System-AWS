@@ -1,0 +1,65 @@
+import { Plus, Edit2, Trash2 } from 'lucide-react';
+
+export default function RolesTab({ roles, setRoles }) {
+  const handleDeleteRole = (id) => {
+    setRoles(roles.filter(r => r.id !== id));
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow">
+      <div className="p-4 border-b flex justify-between items-center">
+        <h3 className="text-lg font-semibold">Roles</h3>
+        <button className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+          <Plus className="w-4 h-4" />
+          <span>Add Role</span>
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b bg-gray-50">
+              <th className="text-left p-4 font-medium text-gray-700">Role Name</th>
+              <th className="text-left p-4 font-medium text-gray-700">Description</th>
+              <th className="text-left p-4 font-medium text-gray-700">Permissions</th>
+              <th className="text-left p-4 font-medium text-gray-700">Users</th>
+              <th className="text-left p-4 font-medium text-gray-700">Created</th>
+              <th className="text-left p-4 font-medium text-gray-700">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {roles.map(role => (
+              <tr key={role.id} className="border-b hover:bg-gray-50">
+                <td className="p-4 font-medium">{role.name}</td>
+                <td className="p-4 text-gray-600">{role.description}</td>
+                <td className="p-4">
+                  <div className="flex flex-wrap gap-1">
+                    {role.permissions.map((perm, idx) => (
+                      <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                        {perm}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+                <td className="p-4 text-gray-600">{role.users}</td>
+                <td className="p-4 text-gray-600">{role.created}</td>
+                <td className="p-4">
+                  <div className="flex items-center space-x-2">
+                    <button className="p-1 hover:bg-gray-100 rounded">
+                      <Edit2 className="w-4 h-4 text-gray-600" />
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteRole(role.id)}
+                      className="p-1 hover:bg-gray-100 rounded"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
