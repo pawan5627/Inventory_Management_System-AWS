@@ -5,6 +5,7 @@ import AddDepartmentModal from './AddDepartmentModal';
 export default function DepartmentsTab({ departments, setDepartments }) {
   const [showAddDepartment, setShowAddDepartment] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('all');
   const getStatusColor = (status) => {
     return status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
   };
@@ -25,6 +26,16 @@ export default function DepartmentsTab({ departments, setDepartments }) {
           <span>Add Department</span>
         </button>
       </div>
+      <div className="px-4 py-3 border-b grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Status</label>
+          <select className="w-full border rounded-lg px-3 py-2" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <option value="all">All</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -39,7 +50,7 @@ export default function DepartmentsTab({ departments, setDepartments }) {
             </tr>
           </thead>
           <tbody>
-            {departments.map(dept => (
+            {departments.filter(d => statusFilter === 'all' || d.status === statusFilter).map(dept => (
               <tr key={dept.id} className="border-b hover:bg-gray-50">
                 <td className="p-4 font-medium">{dept.name}</td>
                 <td className="p-4 text-gray-600">{dept.head}</td>

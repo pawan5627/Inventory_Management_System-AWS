@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Filter, ChevronDown, Upload, Plus, Eye, Edit2, Trash2, AlertCircle } from 'lucide-react';
 import AddItemModal from './AddItemModal';
 import AddCategoryModal from './AddCategoryModal';
@@ -12,6 +12,9 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
   const [pendingEditCategory, setPendingEditCategory] = useState(null);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [itemStatusFilter, setItemStatusFilter] = useState('all');
+  const [categoryStatusFilter, setCategoryStatusFilter] = useState('all');
+  const filterRef = useRef(null);
   const [categories, setCategories] = useState([
     { name: 'Electronics', description: 'Devices and accessories' },
     { name: 'Stationery', description: 'Office supplies' },
@@ -44,8 +47,22 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.sku.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    return matchesSearch && matchesCategory;
+    const matchesItemStatus = (() => {
+      if (itemStatusFilter === 'all') return true;
+      return (product.status || '').toLowerCase() === itemStatusFilter.toLowerCase();
+    })();
+    return matchesSearch && matchesCategory && matchesItemStatus;
   });
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (filterRef.current && !filterRef.current.contains(e.target)) {
+        setShowFilterMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleDeleteProduct = (id) => {
     const p = products.find(x => x.id === id);
@@ -86,31 +103,68 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
         </div>
         <div className="p-4 border-b flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <button
-              onClick={() => setShowFilterMenu(!showFilterMenu)}
-              className="flex items-center space-x-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
-            >
-              <Filter className="w-4 h-4" />
-              <span>Filter</span>
-              <ChevronDown className="w-4 h-4" />
-            </button>
-            
-            {showFilterMenu && (
-              <div className="absolute top-16 bg-white border rounded-lg shadow-lg p-4 z-10">
-                <h4 className="font-medium mb-2">Category</h4>
-                {filterCategories.map(cat => (
-                  <label key={cat} className="flex items-center space-x-2 mb-2">
-                    <input
-                      type="radio"
-                      checked={selectedCategory === cat}
-                      onChange={() => setSelectedCategory(cat)}
-                      className="text-blue-500"
-                    />
-                    <span className="text-sm capitalize">{cat}</span>
-                  </label>
-                ))}
-              </div>
-            )}
+            <div className="relative" ref={filterRef}>
+              <button
+                onClick={() => setShowFilterMenu(!showFilterMenu)}
+                className="flex items-center space-x-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
+              >
+                <Filter className="w-4 h-4" />
+                <span>Filter</span>
+                <ChevronDown className="w-4 h-4" />
+              </button>
+
+              {showFilterMenu && (
+                <div className="absolute left-0 mt-2 bg-white border rounded-lg shadow-lg p-4 z-10 w-64">
+                  {activeTab === 'items' ? (
+                    <div className="space-y-3">
+                      <div>
+                        <h4 className="font-medium mb-2">Category</h4>
+                        {filterCategories.map(cat => (
+                          <label key={cat} className="flex items-center space-x-2 mb-2">
+                            <input
+                              type="radio"
+                              checked={selectedCategory === cat}
+                              onChange={() => setSelectedCategory(cat)}
+                              className="text-blue-500"
+                            />
+                            <span className="text-sm capitalize">{cat}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div>
+                        <h4 className="font-medium mb-2">Status</h4>
+                        {['all','In Stock','Low Stock','Out of Stock','Inactive'].map(st => (
+                          <label key={st} className="flex items-center space-x-2 mb-2">
+                            <input
+                              type="radio"
+                              checked={itemStatusFilter === st}
+                              onChange={() => setItemStatusFilter(st)}
+                              className="text-blue-500"
+                            />
+                            <span className="text-sm">{st === 'all' ? 'All' : st}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <h4 className="font-medium mb-2">Status</h4>
+                      {['all','Active','Inactive'].map(st => (
+                        <label key={st} className="flex items-center space-x-2 mb-2">
+                          <input
+                            type="radio"
+                            checked={categoryStatusFilter === st}
+                            onChange={() => setCategoryStatusFilter(st)}
+                            className="text-blue-500"
+                          />
+                          <span className="text-sm">{st === 'all' ? 'All' : st}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {activeTab === 'items' ? (
               <span className="text-sm text-gray-600">
@@ -234,7 +288,12 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
                 </tr>
               </thead>
               <tbody>
-                {categoryRows.map(cat => (
+                {categoryRows
+                  .filter(cat => {
+                    if (categoryStatusFilter === 'all') return true;
+                    return (cat.status || 'Active') === categoryStatusFilter;
+                  })
+                  .map(cat => (
                   <tr key={cat.name} className="border-b hover:bg-gray-50">
                     <td className="p-4">
                       <p className="font-medium">{cat.name}</p>

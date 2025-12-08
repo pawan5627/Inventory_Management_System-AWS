@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import AddGroupModal from './AddGroupModal';
 
 export default function GroupsTab({ groups, setGroups, roles = [] }) {
   const [showAddGroup, setShowAddGroup] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const handleDeleteGroup = (id) => {
     const g = groups.find(x => x.id === id);
@@ -28,6 +29,16 @@ export default function GroupsTab({ groups, setGroups, roles = [] }) {
           <span>Add Group</span>
         </button>
       </div>
+      <div className="px-4 py-3 border-b grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">Status</label>
+          <select className="w-full border rounded-lg px-3 py-2" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <option value="all">All</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </div>
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -42,7 +53,7 @@ export default function GroupsTab({ groups, setGroups, roles = [] }) {
             </tr>
           </thead>
           <tbody>
-            {groups.map(group => (
+            {groups.filter(g => statusFilter === 'all' || (g.status || 'Active') === statusFilter).map(group => (
               <tr key={group.id} className="border-b hover:bg-gray-50">
                 <td className="p-4 font-medium">{group.name}</td>
                 <td className="p-4 text-gray-600">{group.description}</td>

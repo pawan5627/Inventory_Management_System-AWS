@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import AddUserModal from './AddUsersModal';
 
 export default function UsersTab({ users, setUsers }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [groupFilter, setGroupFilter] = useState('all');
+  const [departmentFilter, setDepartmentFilter] = useState('all');
+  const [companyFilter, setCompanyFilter] = useState('all');
 
   const getStatusColor = (status) => {
     return status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
@@ -18,6 +22,22 @@ export default function UsersTab({ users, setUsers }) {
     }
   };
 
+  const distinct = useMemo(() => {
+    const groups = Array.from(new Set(users.map(u => (u.group || u.role || '').toString()).filter(Boolean)));
+    const departments = Array.from(new Set(users.map(u => u.department).filter(Boolean)));
+    const companies = Array.from(new Set(users.map(u => u.company).filter(Boolean)));
+    return { groups, departments, companies };
+  }, [users]);
+
+  const filteredUsers = users.filter(u => {
+    const statusOk = statusFilter === 'all' || (u.status || '').toLowerCase() === statusFilter.toLowerCase();
+    const groupValue = (u.group || u.role || '').toString();
+    const groupOk = groupFilter === 'all' || groupValue === groupFilter;
+    const deptOk = departmentFilter === 'all' || u.department === departmentFilter;
+    const compOk = companyFilter === 'all' || u.company === companyFilter;
+    return statusOk && groupOk && deptOk && compOk;
+  });
+
   return (
     <>
       <div className="bg-white rounded-lg shadow">
@@ -30,6 +50,43 @@ export default function UsersTab({ users, setUsers }) {
             <Plus className="w-4 h-4" />
             <span>Add User</span>
           </button>
+        </div>
+        <div className="px-4 py-3 border-b grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Status</label>
+            <select className="w-full border rounded-lg px-3 py-2" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+              <option value="all">All</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Group</label>
+            <select className="w-full border rounded-lg px-3 py-2" value={groupFilter} onChange={e => setGroupFilter(e.target.value)}>
+              <option value="all">All</option>
+              {distinct.groups.map(g => (
+                <option key={g} value={g}>{g}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Department</label>
+            <select className="w-full border rounded-lg px-3 py-2" value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)}>
+              <option value="all">All</option>
+              {distinct.departments.map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Company</label>
+            <select className="w-full border rounded-lg px-3 py-2" value={companyFilter} onChange={e => setCompanyFilter(e.target.value)}>
+              <option value="all">All</option>
+              {distinct.companies.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -46,11 +103,11 @@ export default function UsersTab({ users, setUsers }) {
               </tr>
             </thead>
             <tbody>
-              {users.map(user => (
+              {filteredUsers.map(user => (
                 <tr key={user.id} className="border-b hover:bg-gray-50">
                   <td className="p-4 font-medium">{user.name}</td>
                   <td className="p-4 text-gray-600">{user.email}</td>
-                  <td className="p-4 text-gray-600">{user.group}</td>
+                  <td className="p-4 text-gray-600">{user.group || user.role}</td>
                   <td className="p-4 text-gray-600">{user.department}</td>
                   <td className="p-4 text-gray-600">{user.company}</td>
                   <td className="p-4">
