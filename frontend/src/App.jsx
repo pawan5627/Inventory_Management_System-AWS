@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import Login from './components/auth/Login';
-import SignUp from './components/auth/SignUp';
-import ForgotPassword from './components/auth/ForgotPassword';
-import ResetPassword from './components/auth/ResetPassword';
+import Login from './components/auth/login';
+import SignUp from './components/auth/signUp';
+import ForgotPassword from './components/auth/forgotPassword';
+import ResetPassword from './components/auth/resetPassword';
 import MainApp from './components/layout/MainApp';
 
 function App() {

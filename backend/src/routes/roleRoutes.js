@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const roleController = require("../controllers/roleController");
-const auth = require("../middleware/authMiddleware");
-const { requireRole } = require("../middleware/rbacMiddleware");
+const auth = require("../middlewares/authMiddleware");
+const { requireRole } = require("../middlewares/rbacMiddleware");
 
 // only authenticated users with role 'role.create' can create roles
 router.post("/", auth, requireRole("role.create"), roleController.createRole);
