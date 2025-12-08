@@ -5,6 +5,7 @@ import Dashboard from '../dashboard/Dashboard';
 import SystemStatus from '../dashboard/SystemStatus';
 import ItemManagement from '../inventory/ItemManagement';
 import UserManagement from '../users/UserManagement';
+import Profile from '../profile/Profile';
 import { BarChart3 } from 'lucide-react';
 
 export default function MainApp({ onLogout }) {
@@ -46,12 +47,15 @@ export default function MainApp({ onLogout }) {
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           notifications={notifications}
+          onLogout={onLogout}
+          setActiveView={setActiveView}
         />
         
         {activeView === 'dashboard' && <Dashboard products={products} users={users} />}
         {activeView === 'system-status' && <SystemStatus />}
         {activeView === 'items' && <ItemManagement products={products} setProducts={setProducts} searchTerm={searchTerm} />}
         {activeView === 'user-management' && <UserManagement />}
+        {activeView === 'profile' && <Profile initialUser={{ firstName: 'Admin', lastName: '', email: 'admin@example.com' }} />}
         {activeView === 'reports' && (
           <div className="p-6">
             <div className="bg-white rounded-lg shadow p-8 text-center">
