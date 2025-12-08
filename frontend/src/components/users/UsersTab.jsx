@@ -1,14 +1,23 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import AddUserModal from './AddUsersModal';
+import FilterRow from '../common/filters/FilterRow';
+import SelectFilter from '../common/filters/SelectFilter';
+import StatusBadge from '../common/StatusBadge';
+import TableContainer from '../common/TableContainer';
 
 export default function UsersTab({ users, setUsers }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [groupFilter, setGroupFilter] = useState('all');
-  const [departmentFilter, setDepartmentFilter] = useState('all');
-  const [companyFilter, setCompanyFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(() => localStorage.getItem('usersFilter_status') || 'all');
+  const [groupFilter, setGroupFilter] = useState(() => localStorage.getItem('usersFilter_group') || 'all');
+  const [departmentFilter, setDepartmentFilter] = useState(() => localStorage.getItem('usersFilter_department') || 'all');
+  const [companyFilter, setCompanyFilter] = useState(() => localStorage.getItem('usersFilter_company') || 'all');
+
+  useEffect(() => { localStorage.setItem('usersFilter_status', statusFilter); }, [statusFilter]);
+  useEffect(() => { localStorage.setItem('usersFilter_group', groupFilter); }, [groupFilter]);
+  useEffect(() => { localStorage.setItem('usersFilter_department', departmentFilter); }, [departmentFilter]);
+  useEffect(() => { localStorage.setItem('usersFilter_company', companyFilter); }, [companyFilter]);
 
   const getStatusColor = (status) => {
     return status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
@@ -51,44 +60,33 @@ export default function UsersTab({ users, setUsers }) {
             <span>Add User</span>
           </button>
         </div>
-        <div className="px-4 py-3 border-b grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Status</label>
-            <select className="w-full border rounded-lg px-3 py-2" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="all">All</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Group</label>
-            <select className="w-full border rounded-lg px-3 py-2" value={groupFilter} onChange={e => setGroupFilter(e.target.value)}>
-              <option value="all">All</option>
-              {distinct.groups.map(g => (
-                <option key={g} value={g}>{g}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Department</label>
-            <select className="w-full border rounded-lg px-3 py-2" value={departmentFilter} onChange={e => setDepartmentFilter(e.target.value)}>
-              <option value="all">All</option>
-              {distinct.departments.map(d => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 mb-1">Company</label>
-            <select className="w-full border rounded-lg px-3 py-2" value={companyFilter} onChange={e => setCompanyFilter(e.target.value)}>
-              <option value="all">All</option>
-              {distinct.companies.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
+        <FilterRow>
+          <SelectFilter
+            label="Status"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[{value:'all',label:'All'},{value:'Active',label:'Active'},{value:'Inactive',label:'Inactive'}]}
+          />
+          <SelectFilter
+            label="Group"
+            value={groupFilter}
+            onChange={setGroupFilter}
+            options={[{value:'all',label:'All'}, ...distinct.groups.map(g=>({value:g,label:g}))]}
+          />
+          <SelectFilter
+            label="Department"
+            value={departmentFilter}
+            onChange={setDepartmentFilter}
+            options={[{value:'all',label:'All'}, ...distinct.departments.map(d=>({value:d,label:d}))]}
+          />
+          <SelectFilter
+            label="Company"
+            value={companyFilter}
+            onChange={setCompanyFilter}
+            options={[{value:'all',label:'All'}, ...distinct.companies.map(c=>({value:c,label:c}))]}
+          />
+        </FilterRow>
+        <TableContainer>
           <table className="w-full">
             <thead>
               <tr className="border-b bg-gray-50">
@@ -110,11 +108,7 @@ export default function UsersTab({ users, setUsers }) {
                   <td className="p-4 text-gray-600">{user.group || user.role}</td>
                   <td className="p-4 text-gray-600">{user.department}</td>
                   <td className="p-4 text-gray-600">{user.company}</td>
-                  <td className="p-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(user.status)}`}>
-                      {user.status}
-                    </span>
-                  </td>
+                  <td className="p-4"><StatusBadge status={user.status} /></td>
                   <td className="p-4 text-gray-600 text-sm">{user.lastLogin}</td>
                   <td className="p-4">
                     <div className="flex items-center space-x-2">
@@ -133,7 +127,7 @@ export default function UsersTab({ users, setUsers }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </TableContainer>
       </div>
 
       {showAddModal && (

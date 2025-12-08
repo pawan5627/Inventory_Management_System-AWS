@@ -1,11 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import AddRoleModal from './AddRoleModal';
+import FilterRow from '../common/filters/FilterRow';
+import SelectFilter from '../common/filters/SelectFilter';
+import StatusBadge from '../common/StatusBadge';
+import TableContainer from '../common/TableContainer';
 
 export default function RolesTab({ roles, setRoles }) {
   const [showAddRole, setShowAddRole] = useState(false);
   const [editingRole, setEditingRole] = useState(null);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(() => localStorage.getItem('rolesFilter_status') || 'all');
+  useEffect(() => { localStorage.setItem('rolesFilter_status', statusFilter); }, [statusFilter]);
 
   const getStatusColor = (status) => {
     return status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
@@ -28,17 +33,15 @@ export default function RolesTab({ roles, setRoles }) {
           <span>Add Role</span>
         </button>
       </div>
-      <div className="px-4 py-3 border-b grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Status</label>
-          <select className="w-full border rounded-lg px-3 py-2" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="all">All</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-          </select>
-        </div>
-      </div>
-      <div className="overflow-x-auto">
+      <FilterRow>
+        <SelectFilter
+          label="Status"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[{value:'all',label:'All'},{value:'Active',label:'Active'},{value:'Inactive',label:'Inactive'}]}
+        />
+      </FilterRow>
+      <TableContainer>
         <table className="w-full">
           <thead>
             <tr className="border-b bg-gray-50">
@@ -65,11 +68,7 @@ export default function RolesTab({ roles, setRoles }) {
                     ))}
                   </div>
                 </td>
-                  <td className="p-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(role.status || 'Active')}`}>
-                      {role.status || 'Active'}
-                    </span>
-                  </td>
+                  <td className="p-4"><StatusBadge status={role.status || 'Active'} /></td>
                 <td className="p-4 text-gray-600">{role.users}</td>
                 <td className="p-4 text-gray-600">{role.created}</td>
                 <td className="p-4">
@@ -89,7 +88,7 @@ export default function RolesTab({ roles, setRoles }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </TableContainer>
 
       {showAddRole && (
         <AddRoleModal

@@ -1,11 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import AddDepartmentModal from './AddDepartmentModal';
+import FilterRow from '../common/filters/FilterRow';
+import SelectFilter from '../common/filters/SelectFilter';
+import StatusBadge from '../common/StatusBadge';
+import TableContainer from '../common/TableContainer';
 
 export default function DepartmentsTab({ departments, setDepartments }) {
   const [showAddDepartment, setShowAddDepartment] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState(null);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(() => localStorage.getItem('departmentsFilter_status') || 'all');
+  useEffect(() => { localStorage.setItem('departmentsFilter_status', statusFilter); }, [statusFilter]);
   const getStatusColor = (status) => {
     return status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
   };
@@ -26,17 +31,15 @@ export default function DepartmentsTab({ departments, setDepartments }) {
           <span>Add Department</span>
         </button>
       </div>
-      <div className="px-4 py-3 border-b grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Status</label>
-          <select className="w-full border rounded-lg px-3 py-2" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="all">All</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-          </select>
-        </div>
-      </div>
-      <div className="overflow-x-auto">
+      <FilterRow>
+        <SelectFilter
+          label="Status"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[{value:'all',label:'All'},{value:'Active',label:'Active'},{value:'Inactive',label:'Inactive'}]}
+        />
+      </FilterRow>
+      <TableContainer>
         <table className="w-full">
           <thead>
             <tr className="border-b bg-gray-50">
@@ -57,11 +60,7 @@ export default function DepartmentsTab({ departments, setDepartments }) {
                 <td className="p-4 text-gray-600">{dept.employees}</td>
                 <td className="p-4 text-gray-600">{dept.location}</td>
                 <td className="p-4 text-gray-600">{dept.budget}</td>
-                <td className="p-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(dept.status)}`}>
-                    {dept.status}
-                  </span>
-                </td>
+                <td className="p-4"><StatusBadge status={dept.status} /></td>
                 <td className="p-4">
                   <div className="flex items-center space-x-2">
                     <button className="p-1 hover:bg-gray-100 rounded" onClick={() => { setEditingDepartment(dept); setShowAddDepartment(true); }}>
@@ -79,7 +78,7 @@ export default function DepartmentsTab({ departments, setDepartments }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </TableContainer>
 
       {showAddDepartment && (
         <AddDepartmentModal

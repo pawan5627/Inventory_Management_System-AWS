@@ -1,11 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
 import AddGroupModal from './AddGroupModal';
+import FilterRow from '../common/filters/FilterRow';
+import SelectFilter from '../common/filters/SelectFilter';
+import StatusBadge from '../common/StatusBadge';
+import TableContainer from '../common/TableContainer';
 
 export default function GroupsTab({ groups, setGroups, roles = [] }) {
   const [showAddGroup, setShowAddGroup] = useState(false);
   const [editingGroup, setEditingGroup] = useState(null);
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(() => localStorage.getItem('groupsFilter_status') || 'all');
+  useEffect(() => { localStorage.setItem('groupsFilter_status', statusFilter); }, [statusFilter]);
 
   const handleDeleteGroup = (id) => {
     const g = groups.find(x => x.id === id);
@@ -29,17 +34,15 @@ export default function GroupsTab({ groups, setGroups, roles = [] }) {
           <span>Add Group</span>
         </button>
       </div>
-      <div className="px-4 py-3 border-b grid grid-cols-1 md:grid-cols-4 gap-3">
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">Status</label>
-          <select className="w-full border rounded-lg px-3 py-2" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="all">All</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-          </select>
-        </div>
-      </div>
-      <div className="overflow-x-auto">
+      <FilterRow>
+        <SelectFilter
+          label="Status"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[{value:'all',label:'All'},{value:'Active',label:'Active'},{value:'Inactive',label:'Inactive'}]}
+        />
+      </FilterRow>
+      <TableContainer>
         <table className="w-full">
           <thead>
             <tr className="border-b bg-gray-50">
@@ -59,11 +62,7 @@ export default function GroupsTab({ groups, setGroups, roles = [] }) {
                 <td className="p-4 text-gray-600">{group.description}</td>
                 <td className="p-4 text-gray-600">{group.members}</td>
                 <td className="p-4 text-gray-600">{group.permissions}</td>
-                <td className="p-4">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(group.status || 'Active')}`}>
-                    {group.status || 'Active'}
-                  </span>
-                </td>
+                <td className="p-4"><StatusBadge status={group.status || 'Active'} /></td>
                 <td className="p-4 text-gray-600">{group.created}</td>
                 <td className="p-4">
                   <div className="flex items-center space-x-2">
@@ -82,7 +81,7 @@ export default function GroupsTab({ groups, setGroups, roles = [] }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </TableContainer>
     </div>
 
     {showAddGroup && (

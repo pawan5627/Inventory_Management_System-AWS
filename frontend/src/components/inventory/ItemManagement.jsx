@@ -1,5 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { Filter, ChevronDown, Upload, Plus, Eye, Edit2, Trash2, AlertCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Upload, Plus, Eye, Edit2, Trash2, AlertCircle } from 'lucide-react';
+import TableContainer from '../common/TableContainer';
+import FilterRow from '../common/filters/FilterRow';
+import SelectFilter from '../common/filters/SelectFilter';
+import StatusBadge from '../common/StatusBadge';
 import AddItemModal from './AddItemModal';
 import AddCategoryModal from './AddCategoryModal';
 import ExportMenu from './ExportMenu';
@@ -10,11 +14,19 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
   const [editingProduct, setEditingProduct] = useState(null);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [pendingEditCategory, setPendingEditCategory] = useState(null);
-  const [showFilterMenu, setShowFilterMenu] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [itemStatusFilter, setItemStatusFilter] = useState('all');
-  const [categoryStatusFilter, setCategoryStatusFilter] = useState('all');
-  const filterRef = useRef(null);
+  const [selectedCategory, setSelectedCategory] = useState(() => localStorage.getItem('itemFilter_selectedCategory') || 'all');
+  const [itemStatusFilter, setItemStatusFilter] = useState(() => localStorage.getItem('itemFilter_itemStatus') || 'all');
+  const [categoryStatusFilter, setCategoryStatusFilter] = useState(() => localStorage.getItem('itemFilter_categoryStatus') || 'all');
+
+  useEffect(() => {
+    localStorage.setItem('itemFilter_selectedCategory', selectedCategory);
+  }, [selectedCategory]);
+  useEffect(() => {
+    localStorage.setItem('itemFilter_itemStatus', itemStatusFilter);
+  }, [itemStatusFilter]);
+  useEffect(() => {
+    localStorage.setItem('itemFilter_categoryStatus', categoryStatusFilter);
+  }, [categoryStatusFilter]);
   const [categories, setCategories] = useState([
     { name: 'Electronics', description: 'Devices and accessories' },
     { name: 'Stationery', description: 'Office supplies' },
@@ -30,18 +42,7 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
     status: c.status || 'Active'
   }));
 
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'In Stock':
-        return 'bg-green-100 text-green-800';
-      case 'Low Stock':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Out of Stock':
-        return 'bg-red-100 text-red-800';
-      default: 
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const getStatusColor = () => '';
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -54,15 +55,7 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
     return matchesSearch && matchesCategory && matchesItemStatus;
   });
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (filterRef.current && !filterRef.current.contains(e.target)) {
-        setShowFilterMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  
 
   const handleDeleteProduct = (id) => {
     const p = products.find(x => x.id === id);
@@ -103,68 +96,6 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
         </div>
         <div className="p-4 border-b flex justify-between items-center">
           <div className="flex items-center space-x-4">
-            <div className="relative" ref={filterRef}>
-              <button
-                onClick={() => setShowFilterMenu(!showFilterMenu)}
-                className="flex items-center space-x-2 px-4 py-2 border rounded-lg hover:bg-gray-50"
-              >
-                <Filter className="w-4 h-4" />
-                <span>Filter</span>
-                <ChevronDown className="w-4 h-4" />
-              </button>
-
-              {showFilterMenu && (
-                <div className="absolute left-0 mt-2 bg-white border rounded-lg shadow-lg p-4 z-10 w-64">
-                  {activeTab === 'items' ? (
-                    <div className="space-y-3">
-                      <div>
-                        <h4 className="font-medium mb-2">Category</h4>
-                        {filterCategories.map(cat => (
-                          <label key={cat} className="flex items-center space-x-2 mb-2">
-                            <input
-                              type="radio"
-                              checked={selectedCategory === cat}
-                              onChange={() => setSelectedCategory(cat)}
-                              className="text-blue-500"
-                            />
-                            <span className="text-sm capitalize">{cat}</span>
-                          </label>
-                        ))}
-                      </div>
-                      <div>
-                        <h4 className="font-medium mb-2">Status</h4>
-                        {['all','In Stock','Low Stock','Out of Stock','Inactive'].map(st => (
-                          <label key={st} className="flex items-center space-x-2 mb-2">
-                            <input
-                              type="radio"
-                              checked={itemStatusFilter === st}
-                              onChange={() => setItemStatusFilter(st)}
-                              className="text-blue-500"
-                            />
-                            <span className="text-sm">{st === 'all' ? 'All' : st}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <h4 className="font-medium mb-2">Status</h4>
-                      {['all','Active','Inactive'].map(st => (
-                        <label key={st} className="flex items-center space-x-2 mb-2">
-                          <input
-                            type="radio"
-                            checked={categoryStatusFilter === st}
-                            onChange={() => setCategoryStatusFilter(st)}
-                            className="text-blue-500"
-                          />
-                          <span className="text-sm">{st === 'all' ? 'All' : st}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
 
             {activeTab === 'items' ? (
               <span className="text-sm text-gray-600">
@@ -205,8 +136,35 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
             )}
           </div>
         </div>
+        {/* Filters row similar to User Management */}
+        {activeTab === 'items' && (
+          <FilterRow>
+            <SelectFilter
+              label="Category"
+              value={selectedCategory}
+              onChange={setSelectedCategory}
+              options={filterCategories.map(cat => ({ value: cat, label: cat === 'all' ? 'All' : cat }))}
+            />
+            <SelectFilter
+              label="Status"
+              value={itemStatusFilter}
+              onChange={setItemStatusFilter}
+              options={[{value:'all',label:'All'},{value:'In Stock',label:'In Stock'},{value:'Low Stock',label:'Low Stock'},{value:'Out of Stock',label:'Out of Stock'},{value:'Inactive',label:'Inactive'}]}
+            />
+          </FilterRow>
+        )}
+        {activeTab === 'categories' && (
+          <FilterRow>
+            <SelectFilter
+              label="Status"
+              value={categoryStatusFilter}
+              onChange={setCategoryStatusFilter}
+              options={[{value:'all',label:'All'},{value:'Active',label:'Active'},{value:'Inactive',label:'Inactive'}]}
+            />
+          </FilterRow>
+        )}
         {activeTab === 'items' ? (
-          <div className="overflow-x-auto">
+          <TableContainer>
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-gray-50">
@@ -241,11 +199,7 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
                       </div>
                     </td>
                     <td className="p-4 text-gray-600">${product.price.toFixed(2)}</td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(product.status)}`}>
-                        {product.status}
-                      </span>
-                    </td>
+                    <td className="p-4"><StatusBadge status={product.status} /></td>
                     <td className="p-4">
                       <div className="flex items-center space-x-2">
                         <button 
@@ -274,9 +228,9 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableContainer>
         ) : (
-          <div className="overflow-x-auto">
+          <TableContainer>
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-gray-50">
@@ -300,11 +254,7 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
                     </td>
                     <td className="p-4 text-gray-600">{cat.description}</td>
                     <td className="p-4 text-gray-600">{cat.itemsCount}</td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${cat.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                        {cat.status}
-                      </span>
-                    </td>
+                    <td className="p-4"><StatusBadge status={cat.status} /></td>
                     <td className="p-4">
                       <div className="flex items-center space-x-2">
                         <button className="p-1 hover:bg-gray-100 rounded" title="View details">
@@ -331,7 +281,7 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableContainer>
         )}
       </div>
 

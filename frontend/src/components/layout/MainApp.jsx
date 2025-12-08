@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import Dashboard from '../dashboard/Dashboard';
@@ -12,7 +12,10 @@ export default function MainApp({ onLogout }) {
   const [activeView, setActiveView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [notifications] = useState(3);
+  const [notifications, setNotifications] = useState([]);
+  const [dismissedNotifs, setDismissedNotifs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('dismissedNotifications') || '[]'); } catch { return []; }
+  });
 
   // Sample data for products/items
   const [products, setProducts] = useState([
@@ -22,6 +25,28 @@ export default function MainApp({ onLogout }) {
     { id: 4, name: 'Desk Lamp', sku: 'DL-004', category: 'Furniture', stock: 67, reorderPoint: 20, price: 45.99, status: 'In Stock', lastUpdated: '2024-11-18' },
     { id: 5, name: 'Coffee Maker', sku: 'CM-005', category: 'Appliances', stock: 23, reorderPoint: 10, price: 89.99, status: 'In Stock', lastUpdated: '2024-11-20' },
   ]);
+  
+  // Build notifications from products (low/out of stock) and exclude dismissed
+  useEffect(() => {
+    const notes = [];
+    for (const p of products) {
+      if (p.stock === 0 || (p.status || '').toLowerCase() === 'out of stock') {
+        notes.push({ id: `stock-${p.id}-out`, type: 'critical', message: `Out of stock: ${p.name}`, productId: p.id });
+      } else if (p.stock < p.reorderPoint || (p.status || '').toLowerCase() === 'low stock') {
+        notes.push({ id: `stock-${p.id}-low`, type: 'warning', message: `Low stock: ${p.name} (${p.stock})`, productId: p.id });
+      }
+    }
+    const filtered = notes.filter(n => !dismissedNotifs.includes(n.id));
+    setNotifications(filtered);
+  }, [products, dismissedNotifs]);
+
+  const dismissNotification = (id) => {
+    setDismissedNotifs(prev => {
+      const next = Array.from(new Set([...(prev || []), id]));
+      localStorage.setItem('dismissedNotifications', JSON.stringify(next));
+      return next;
+    });
+  };
 
   // Sample data for users
   const [users] = useState([
@@ -47,6 +72,7 @@ export default function MainApp({ onLogout }) {
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           notifications={notifications}
+          onDismissNotification={dismissNotification}
           onLogout={onLogout}
           setActiveView={setActiveView}
         />
