@@ -5,7 +5,7 @@ const bcrypt = require("bcryptjs");
 const login = async (username, password) => {
   const user = await userService.findByUsername(username);
   if (!user) throw new Error("Invalid credentials");
-  const match = await bcrypt.compare(password, user.password);
+  const match = await bcrypt.compare(password, user.password_hash);
   if (!match) throw new Error("Invalid credentials");
 
   // derive roles (flatten)
@@ -19,14 +19,14 @@ const login = async (username, password) => {
   }
 
   const payload = {
-    sub: user._id.toString(),
+    sub: String(user.id),
     username: user.username,
     roles: Array.from(roleNames),
-    companyId: user.companyId || null
+    companyId: null
   };
 
   const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || "7d" });
-  return { token, user: { id: user._id, username: user.username, email: user.email, roles: payload.roles } };
+  return { token, user: { id: user.id, username: user.username, roles: payload.roles } };
 };
 
 module.exports = { login };

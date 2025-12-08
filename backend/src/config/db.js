@@ -1,29 +1,49 @@
-const mongoose = require("mongoose");
-const fs = require("fs");
-const path = require("path");
+const { Pool } = require("pg");
+
+let pool;
 
 const connectDB = async () => {
   try {
-    const uri = process.env.DOCDB_URI;
-    if (!uri) throw new Error("DOCDB_URI is not defined in env");
+    const {
+      RDS_HOST,
+      RDS_PORT,
+      RDS_USER,
+      RDS_PASSWORD,
+      RDS_DATABASE,
+      RDS_READER_HOST,
+      RDS_SSL_MODE
+    } = process.env;
 
-    // path to CA bundle in project root
-    const caPath = path.resolve(__dirname, "../../rds-combined-ca-bundle.pem");
-    const tlsCAFile = fs.existsSync(caPath) ? caPath : undefined;
+    if (!RDS_HOST || !RDS_USER || !RDS_PASSWORD || !RDS_DATABASE) {
+      throw new Error("Missing RDS env vars (RDS_HOST, RDS_USER, RDS_PASSWORD, RDS_DATABASE)");
+    }
 
-    await mongoose.connect(uri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      tls: !!tlsCAFile,
-      tlsCAFile,
-      retryWrites: false
+    pool = new Pool({
+      host: RDS_HOST,
+      port: Number(RDS_PORT || 5432),
+      user: RDS_USER,
+      password: RDS_PASSWORD,
+      database: RDS_DATABASE,
+      ssl: RDS_SSL_MODE === "require" ? { rejectUnauthorized: true } : false,
+      max: 10
     });
 
-    console.log("Connected to DocumentDB / MongoDB");
+    // quick ping
+    const client = await pool.connect();
+    await client.query("SELECT 1");
+    client.release();
+    console.log("Connected to AWS RDS (PostgreSQL)");
+    return pool;
   } catch (err) {
     console.error("DB connection error:", err.message);
     process.exit(1);
   }
 };
 
+const getPool = () => {
+  if (!pool) throw new Error("DB Pool not initialized. Call connectDB() first.");
+  return pool;
+};
+
 module.exports = connectDB;
+module.exports.getPool = getPool;

@@ -9,6 +9,7 @@ const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const groupRoutes = require("./routes/groupRoutes");
 const roleRoutes = require("./routes/roleRoutes");
+const categoryRoutes = require("./routes/categoryRoutes");
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/roles", roleRoutes);
+app.use("/api/categories", categoryRoutes);
 
 app.use(errorHandler);
 
@@ -27,6 +29,7 @@ const PORT = process.env.PORT || 4000;
 
 const start = async () => {
   await connectDB();
+  app.get('/health', (req, res) => res.json({ status: 'ok' }));
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
