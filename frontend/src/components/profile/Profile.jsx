@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { User } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, Upload, X } from 'lucide-react';
 
 export default function Profile({ initialUser = { firstName: 'Admin', lastName: '', email: 'admin@example.com' } }) {
   const [firstName, setFirstName] = useState(initialUser.firstName || '');
@@ -10,6 +10,12 @@ export default function Profile({ initialUser = { firstName: 'Admin', lastName: 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [avatarDataUrl, setAvatarDataUrl] = useState('');
+
+  useEffect(() => {
+    const saved = localStorage.getItem('profileAvatar');
+    if (saved) setAvatarDataUrl(saved);
+  }, []);
 
   const handleSave = (e) => {
     e.preventDefault();
@@ -23,17 +29,68 @@ export default function Profile({ initialUser = { firstName: 'Admin', lastName: 
         return;
       }
     }
+    // Persist avatar locally
+    if (avatarDataUrl) {
+      localStorage.setItem('profileAvatar', avatarDataUrl);
+    } else {
+      localStorage.removeItem('profileAvatar');
+    }
     alert('Profile saved');
   };
 
   const initials = `${(firstName || 'A')[0] || 'A'}${(lastName || '')[0] || ''}`.toUpperCase();
 
+  const handleAvatarChange = (file) => {
+    if (!file) return;
+    const validTypes = ['image/png', 'image/jpeg'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please upload a PNG or JPG image');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image must be under 2MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setAvatarDataUrl(String(e.target?.result || ''));
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="p-6">
       <div className="bg-white rounded-lg shadow p-6 max-w-3xl mx-auto">
         <div className="flex items-center space-x-4 mb-6">
-          <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 text-lg font-semibold select-none">
-            {initials || <User className="w-8 h-8" />}
+          <div className="relative">
+            <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 text-lg font-semibold select-none overflow-hidden">
+              {avatarDataUrl ? (
+                <img src={avatarDataUrl} alt="avatar" className="w-full h-full object-cover" />
+              ) : (
+                initials || <User className="w-8 h-8" />
+              )}
+            </div>
+            <div className="absolute -bottom-2 -right-2 flex space-x-2">
+              <label className="cursor-pointer bg-white border rounded-full p-1 shadow hover:bg-gray-50" title="Upload avatar">
+                <Upload className="w-4 h-4 text-gray-700" />
+                <input
+                  type="file"
+                  accept="image/png, image/jpeg"
+                  className="hidden"
+                  onChange={(e) => handleAvatarChange(e.target.files?.[0])}
+                />
+              </label>
+              {avatarDataUrl && (
+                <button
+                  type="button"
+                  className="bg-white border rounded-full p-1 shadow hover:bg-gray-50"
+                  title="Remove avatar"
+                  onClick={() => setAvatarDataUrl('')}
+                >
+                  <X className="w-4 h-4 text-gray-700" />
+                </button>
+              )}
+            </div>
           </div>
           <div>
             <h3 className="text-xl font-semibold text-gray-800">Profile</h3>

@@ -1,8 +1,25 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Bell, User, ChevronDown } from 'lucide-react';
+import { Search as SearchIcon, Bell, User, ChevronDown } from 'lucide-react';
 
 export default function Header({ activeView, searchTerm, setSearchTerm, notifications, onLogout, setActiveView }) {
   const [profileOpen, setProfileOpen] = useState(false);
+  const [avatarDataUrl, setAvatarDataUrl] = useState('');
+  const [showSearchOptions, setShowSearchOptions] = useState(false);
+
+  const allowedOptions = [
+    { label: 'Dashboard', view: 'dashboard' },
+    { label: 'System Status', view: 'system-status' },
+    { label: 'Items', view: 'items' },
+    { label: 'Item Category', view: 'items' },
+    { label: 'User Management', view: 'user-management' },
+    { label: 'Users', view: 'user-management' },
+    { label: 'Groups', view: 'user-management' },
+    { label: 'Roles', view: 'user-management' },
+    { label: 'Departments', view: 'user-management' },
+    { label: 'Companies', view: 'user-management' },
+    { label: 'Reports', view: 'reports' },
+    { label: 'Profile', view: 'profile' },
+  ];
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -16,6 +33,29 @@ export default function Header({ activeView, searchTerm, setSearchTerm, notifica
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('profileAvatar');
+    if (saved) setAvatarDataUrl(saved);
+  }, []);
+
+  const filteredOptions = allowedOptions.filter((opt) =>
+    (searchTerm || '').toLowerCase().trim() === ''
+      ? false
+      : opt.label.toLowerCase().includes((searchTerm || '').toLowerCase().trim())
+  );
+
+  const triggerSearchNavigate = () => {
+    if (!setActiveView) return;
+    const exact = allowedOptions.find(
+      (opt) => opt.label.toLowerCase() === (searchTerm || '').toLowerCase().trim()
+    );
+    const target = exact || filteredOptions[0];
+    if (target) {
+      setActiveView(target.view);
+      setShowSearchOptions(false);
+    }
+  };
   const getTitle = () => {
     switch(activeView) {
       case 'system-status': return 'System Status';
@@ -40,10 +80,39 @@ export default function Header({ activeView, searchTerm, setSearchTerm, notifica
               type="text"
               placeholder="Search..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setShowSearchOptions(true);
+              }}
+              onFocus={() => setShowSearchOptions(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  triggerSearchNavigate();
+                }
+                if (e.key === 'Escape') {
+                  setShowSearchOptions(false);
+                }
+              }}
               className="pl-10 pr-4 py-2 border rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <Search className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+            <SearchIcon className="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
+
+            {showSearchOptions && filteredOptions.length > 0 && (
+              <div className="absolute left-0 right-0 mt-1 bg-white border rounded-lg shadow z-10 max-h-40 overflow-auto">
+                {filteredOptions.map((opt) => (
+                  <button
+                    key={opt.label}
+                    className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50"
+                    onClick={() => {
+                      setActiveView && setActiveView(opt.view);
+                      setShowSearchOptions(false);
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           
           <button className="relative p-2 hover:bg-gray-100 rounded-lg">
@@ -60,8 +129,12 @@ export default function Header({ activeView, searchTerm, setSearchTerm, notifica
               className="flex items-center space-x-2 px-2 py-1 hover:bg-gray-100 rounded-lg"
               onClick={() => setProfileOpen((prev) => !prev)}
             >
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <User className="w-5 h-5 text-gray-600" />
+              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
+                {avatarDataUrl ? (
+                  <img src={avatarDataUrl} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-5 h-5 text-gray-600" />
+                )}
               </div>
               <span className="text-sm font-medium">Admin</span>
               <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${profileOpen ? 'rotate-180' : ''}`} />
