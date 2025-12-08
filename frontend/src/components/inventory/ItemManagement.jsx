@@ -1,15 +1,24 @@
 import { useState } from 'react';
 import { Filter, ChevronDown, Upload, Plus, Eye, Edit2, Trash2, AlertCircle } from 'lucide-react';
 import AddItemModal from './AddItemModal';
+import AddCategoryModal from './AddCategoryModal';
 import ExportMenu from './ExportMenu';
 
 export default function ItemManagement({ products, setProducts, searchTerm }) {
+  const [activeTab, setActiveTab] = useState('items');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [showAddCategory, setShowAddCategory] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
 
   const categories = ['all', 'Electronics', 'Stationery', 'Furniture', 'Appliances'];
+  const categoryRows = [
+    { name: 'Electronics', description: 'Devices and accessories', itemsCount: products.filter(p => p.category === 'Electronics').length },
+    { name: 'Stationery', description: 'Office supplies', itemsCount: products.filter(p => p.category === 'Stationery').length },
+    { name: 'Furniture', description: 'Home and office furniture', itemsCount: products.filter(p => p.category === 'Furniture').length },
+    { name: 'Appliances', description: 'Kitchen and home appliances', itemsCount: products.filter(p => p.category === 'Appliances').length },
+  ];
 
   const getStatusColor = (status) => {
     switch(status) {
@@ -50,6 +59,22 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
   return (
     <div className="p-6">
       <div className="bg-white rounded-lg shadow">
+        <div className="px-4 pt-4 border-b">
+          <div className="flex space-x-4">
+            <button
+              onClick={() => setActiveTab('items')}
+              className={`px-4 py-2 font-semibold ${activeTab === 'items' ? 'border-b-2 border-blue-600 text-gray-900' : 'text-gray-500'}`}
+            >
+              Items
+            </button>
+            <button
+              onClick={() => setActiveTab('categories')}
+              className={`px-4 py-2 font-semibold ${activeTab === 'categories' ? 'border-b-2 border-blue-600 text-gray-900' : 'text-gray-500'}`}
+            >
+              Category
+            </button>
+          </div>
+        </div>
         <div className="p-4 border-b flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <button
@@ -78,98 +103,153 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
               </div>
             )}
 
-            <span className="text-sm text-gray-600">
-              Showing {filteredProducts.length} of {products.length} items
-            </span>
+            {activeTab === 'items' ? (
+              <span className="text-sm text-gray-600">
+                Showing {filteredProducts.length} of {products.length} items
+              </span>
+            ) : (
+              <span className="text-sm text-gray-600">
+                {categoryRows.length} categories
+              </span>
+            )}
           </div>
           
           <div className="flex items-center space-x-2">
+            {activeTab === 'items' && (
             <button className="flex items-center space-x-2 px-4 py-2 border rounded-lg hover:bg-gray-50">
               <Upload className="w-4 h-4" />
               <span>Import</span>
             </button>
-            
-            <ExportMenu products={products} filteredProducts={filteredProducts} />
-            
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Item</span>
-            </button>
+            )}
+            {activeTab === 'items' && <ExportMenu products={products} filteredProducts={filteredProducts} />}
+            {activeTab === 'items' && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Item</span>
+              </button>
+            )}
+            {activeTab === 'categories' && (
+              <button
+                onClick={() => setShowAddCategory(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Category</span>
+              </button>
+            )}
           </div>
         </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b bg-gray-50">
-                <th className="text-left p-4 font-medium text-gray-700">Item Name</th>
-                <th className="text-left p-4 font-medium text-gray-700">SKU</th>
-                <th className="text-left p-4 font-medium text-gray-700">Category</th>
-                <th className="text-left p-4 font-medium text-gray-700">Stock</th>
-                <th className="text-left p-4 font-medium text-gray-700">Price</th>
-                <th className="text-left p-4 font-medium text-gray-700">Status</th>
-                <th className="text-left p-4 font-medium text-gray-700">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProducts.map(product => (
-                <tr key={product.id} className="border-b hover:bg-gray-50">
-                  <td className="p-4">
-                    <div>
-                      <p className="font-medium">{product.name}</p>
-                      <p className="text-sm text-gray-500">Last updated: {product.lastUpdated}</p>
-                    </div>
-                  </td>
-                  <td className="p-4 text-gray-600">{product.sku}</td>
-                  <td className="p-4 text-gray-600">{product.category}</td>
-                  <td className="p-4">
-                    <div className="flex items-center space-x-2">
-                      <span className={`font-medium ${product.stock < product.reorderPoint ? 'text-red-600' : 'text-gray-800'}`}>
-                        {product.stock}
-                      </span>
-                      {product.stock < product.reorderPoint && product.stock > 0 && (
-                        <AlertCircle className="w-4 h-4 text-yellow-500" />
-                      )}
-                    </div>
-                  </td>
-                  <td className="p-4 text-gray-600">${product.price.toFixed(2)}</td>
-                  <td className="p-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(product.status)}`}>
-                      {product.status}
-                    </span>
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center space-x-2">
-                      <button 
-                        className="p-1 hover:bg-gray-100 rounded"
-                        title="View details"
-                      >
-                        <Eye className="w-4 h-4 text-gray-600" />
-                      </button>
-                      <button 
-                        onClick={() => handleEditProduct(product)}
-                        className="p-1 hover:bg-gray-100 rounded"
-                        title="Edit item"
-                      >
-                        <Edit2 className="w-4 h-4 text-blue-600" />
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteProduct(product.id)}
-                        className="p-1 hover:bg-gray-100 rounded"
-                        title="Delete item"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-600" />
-                      </button>
-                    </div>
-                  </td>
+        {activeTab === 'items' ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-gray-50">
+                  <th className="text-left p-4 font-medium text-gray-700">Item Name</th>
+                  <th className="text-left p-4 font-medium text-gray-700">SKU</th>
+                  <th className="text-left p-4 font-medium text-gray-700">Category</th>
+                  <th className="text-left p-4 font-medium text-gray-700">Stock</th>
+                  <th className="text-left p-4 font-medium text-gray-700">Price</th>
+                  <th className="text-left p-4 font-medium text-gray-700">Status</th>
+                  <th className="text-left p-4 font-medium text-gray-700">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {filteredProducts.map(product => (
+                  <tr key={product.id} className="border-b hover:bg-gray-50">
+                    <td className="p-4">
+                      <div>
+                        <p className="font-medium">{product.name}</p>
+                        <p className="text-sm text-gray-500">Last updated: {product.lastUpdated}</p>
+                      </div>
+                    </td>
+                    <td className="p-4 text-gray-600">{product.sku}</td>
+                    <td className="p-4 text-gray-600">{product.category}</td>
+                    <td className="p-4">
+                      <div className="flex items-center space-x-2">
+                        <span className={`font-medium ${product.stock < product.reorderPoint ? 'text-red-600' : 'text-gray-800'}`}>
+                          {product.stock}
+                        </span>
+                        {product.stock < product.reorderPoint && product.stock > 0 && (
+                          <AlertCircle className="w-4 h-4 text-yellow-500" />
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-4 text-gray-600">${product.price.toFixed(2)}</td>
+                    <td className="p-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(product.status)}`}>
+                        {product.status}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center space-x-2">
+                        <button 
+                          className="p-1 hover:bg-gray-100 rounded"
+                          title="View details"
+                        >
+                          <Eye className="w-4 h-4 text-gray-600" />
+                        </button>
+                        <button 
+                          onClick={() => handleEditProduct(product)}
+                          className="p-1 hover:bg-gray-100 rounded"
+                          title="Edit item"
+                        >
+                          <Edit2 className="w-4 h-4 text-blue-600" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteProduct(product.id)}
+                          className="p-1 hover:bg-gray-100 rounded"
+                          title="Delete item"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-gray-50">
+                  <th className="text-left p-4 font-medium text-gray-700">Category Name</th>
+                  <th className="text-left p-4 font-medium text-gray-700">Description</th>
+                  <th className="text-left p-4 font-medium text-gray-700">Items Count</th>
+                  <th className="text-left p-4 font-medium text-gray-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {categoryRows.map(cat => (
+                  <tr key={cat.name} className="border-b hover:bg-gray-50">
+                    <td className="p-4">
+                      <p className="font-medium">{cat.name}</p>
+                    </td>
+                    <td className="p-4 text-gray-600">{cat.description}</td>
+                    <td className="p-4 text-gray-600">{cat.itemsCount}</td>
+                    <td className="p-4">
+                      <div className="flex items-center space-x-2">
+                        <button className="p-1 hover:bg-gray-100 rounded" title="View details">
+                          <Eye className="w-4 h-4 text-gray-600" />
+                        </button>
+                        <button className="p-1 hover:bg-gray-100 rounded" title="Edit category">
+                          <Edit2 className="w-4 h-4 text-blue-600" />
+                        </button>
+                        <button className="p-1 hover:bg-gray-100 rounded" title="Delete category">
+                          <Trash2 className="w-4 h-4 text-red-600" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {showAddModal && (
@@ -178,6 +258,16 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
           products={products}
           setProducts={setProducts}
           editProduct={editingProduct}
+        />
+      )}
+      {showAddCategory && (
+        <AddCategoryModal 
+          setShowAddCategory={setShowAddCategory}
+          onSave={(payload) => {
+            // TODO: replace with backend POST /api/categories
+            alert(`Category saved: ${payload.name}${payload.id ? ` (ID ${payload.id})` : ''}`);
+            setShowAddCategory(false);
+          }}
         />
       )}
     </div>
