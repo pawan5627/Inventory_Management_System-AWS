@@ -4,6 +4,7 @@ import AddUserModal from './AddUsersModal';
 
 export default function UsersTab({ users, setUsers }) {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
 
   const getStatusColor = (status) => {
     return status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
@@ -34,7 +35,7 @@ export default function UsersTab({ users, setUsers }) {
               <tr className="border-b bg-gray-50">
                 <th className="text-left p-4 font-medium text-gray-700">Name</th>
                 <th className="text-left p-4 font-medium text-gray-700">Email</th>
-                <th className="text-left p-4 font-medium text-gray-700">Role</th>
+                <th className="text-left p-4 font-medium text-gray-700">Group</th>
                 <th className="text-left p-4 font-medium text-gray-700">Department</th>
                 <th className="text-left p-4 font-medium text-gray-700">Company</th>
                 <th className="text-left p-4 font-medium text-gray-700">Status</th>
@@ -47,7 +48,7 @@ export default function UsersTab({ users, setUsers }) {
                 <tr key={user.id} className="border-b hover:bg-gray-50">
                   <td className="p-4 font-medium">{user.name}</td>
                   <td className="p-4 text-gray-600">{user.email}</td>
-                  <td className="p-4 text-gray-600">{user.role}</td>
+                  <td className="p-4 text-gray-600">{user.group}</td>
                   <td className="p-4 text-gray-600">{user.department}</td>
                   <td className="p-4 text-gray-600">{user.company}</td>
                   <td className="p-4">
@@ -58,7 +59,7 @@ export default function UsersTab({ users, setUsers }) {
                   <td className="p-4 text-gray-600 text-sm">{user.lastLogin}</td>
                   <td className="p-4">
                     <div className="flex items-center space-x-2">
-                      <button className="p-1 hover:bg-gray-100 rounded">
+                      <button className="p-1 hover:bg-gray-100 rounded" onClick={() => { setEditingUser(user); setShowAddModal(true); }}>
                         <Edit2 className="w-4 h-4 text-gray-600" />
                       </button>
                       <button 
@@ -81,6 +82,7 @@ export default function UsersTab({ users, setUsers }) {
           setShowAddModal={setShowAddModal}
           users={users}
           setUsers={setUsers}
+          editUser={editingUser}
         />
       )}
     </>

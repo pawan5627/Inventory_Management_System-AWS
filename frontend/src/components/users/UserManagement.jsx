@@ -88,7 +88,7 @@ export default function UserManagement() {
 
       {/* Tab Content */}
       {activeUserTab === 'users' && <UsersTab users={users} setUsers={setUsers} />}
-      {activeUserTab === 'groups' && <GroupsTab groups={groups} setGroups={setGroups} />}
+      {activeUserTab === 'groups' && <GroupsTab groups={groups} setGroups={setGroups} roles={roles} />}
       {activeUserTab === 'roles' && <RolesTab roles={roles} setRoles={setRoles} />}
       {activeUserTab === 'departments' && <DepartmentsTab departments={departments} setDepartments={setDepartments} />}
       {activeUserTab === 'companies' && <CompaniesTab companies={companies} setCompanies={setCompanies} />}

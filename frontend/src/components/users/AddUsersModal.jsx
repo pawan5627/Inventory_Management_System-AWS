@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { SuccessBanner, ErrorBanner } from '../common/banner';
 
-export default function AddUserModal({ setShowAddModal, users, setUsers }) {
+export default function AddUserModal({ setShowAddModal, users, setUsers, editUser }) {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -10,11 +10,30 @@ export default function AddUserModal({ setShowAddModal, users, setUsers }) {
     email: '',
     password: '',
     confirmPassword: '',
-    role: '',
+    group: '',
     department: '',
     company: '',
     status: 'Active'
   });
+
+  // Prefill when editing
+  useEffect(() => {
+    if (editUser) {
+      const [firstName = '', lastName = ''] = (editUser.name || '').split(' ');
+      setFormData({
+        firstName,
+        lastName,
+        employeeId: editUser.employeeId || '',
+        email: editUser.email || '',
+        password: '',
+        confirmPassword: '',
+        group: editUser.group || '',
+        department: editUser.department || '',
+        company: editUser.company || '',
+        status: editUser.status || 'Active'
+      });
+    }
+  }, [editUser]);
   
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +43,7 @@ export default function AddUserModal({ setShowAddModal, users, setUsers }) {
   const [showErrorBanner, setShowErrorBanner] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const roles = ['Admin', 'Manager', 'User', 'Viewer'];
+  const groups = ['Admins', 'Managers', 'Users', 'Viewers'];
   const departments = ['IT', 'Sales', 'HR', 'Finance', 'Marketing', 'Operations'];
   const companies = ['Tech Corp', 'Sales Partners Inc', 'Global Solutions'];
 
@@ -56,7 +75,7 @@ export default function AddUserModal({ setShowAddModal, users, setUsers }) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
-    } else if (users.some(u => u.email === formData.email)) {
+    } else if (users.some(u => u.email === formData.email && (!editUser || u.id !== editUser.id))) {
       newErrors.email = 'Email already exists';
     }
     
@@ -80,7 +99,7 @@ export default function AddUserModal({ setShowAddModal, users, setUsers }) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
     
-    if (!formData.role) newErrors.role = 'Role is required';
+    if (!formData.group) newErrors.group = 'Group is required';
     if (!formData.department) newErrors.department = 'Department is required';
     if (!formData.company) newErrors.company = 'Company is required';
     
@@ -109,14 +128,18 @@ export default function AddUserModal({ setShowAddModal, users, setUsers }) {
         id: users.length + 1,
         name: `${formData.firstName} ${formData.lastName}`,
         email: formData.email,
-        role: formData.role,
+        group: formData.group,
         department: formData.department,
         company: formData.company,
         status: formData.status,
         lastLogin: new Date().toISOString().slice(0, 16).replace('T', ' ')
       };
-      
-      setUsers([...users, newUser]);
+      if (editUser) {
+        // Update existing
+        setUsers(users.map(u => u.id === editUser.id ? { ...u, ...newUser, id: editUser.id } : u));
+      } else {
+        setUsers([...users, newUser]);
+      }
       setShowSuccessBanner(true);
       
       // Close modal after success
@@ -153,7 +176,7 @@ export default function AddUserModal({ setShowAddModal, users, setUsers }) {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto">
           <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-            <h3 className="text-xl font-semibold">Add New User</h3>
+              <h3 className="text-xl font-semibold">{editUser ? 'Edit User' : 'Add New User'}</h3>
             <button 
               onClick={() => setShowAddModal(false)} 
               className="text-gray-400 hover:text-gray-600"
@@ -244,22 +267,22 @@ export default function AddUserModal({ setShowAddModal, users, setUsers }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Role <span className="text-red-500">*</span>
+                      Group <span className="text-red-500">*</span>
                     </label>
                     <select
-                      name="role"
-                      value={formData.role}
+                      name="group"
+                      value={formData.group}
                       onChange={handleChange}
                       className={`w-full px-3 py-2 border ${
-                        errors.role ? 'border-red-300' : 'border-gray-300'
+                        errors.group ? 'border-red-300' : 'border-gray-300'
                       } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     >
-                      <option value="">Select role</option>
-                      {roles.map(role => (
-                        <option key={role} value={role}>{role}</option>
+                      <option value="">Select group</option>
+                      {groups.map(group => (
+                        <option key={group} value={group}>{group}</option>
                       ))}
                     </select>
-                    {errors.role && <p className="mt-1 text-sm text-red-600">{errors.role}</p>}
+                    {errors.group && <p className="mt-1 text-sm text-red-600">{errors.group}</p>}
                   </div>
 
                   <div>
@@ -459,7 +482,7 @@ export default function AddUserModal({ setShowAddModal, users, setUsers }) {
                 disabled={isLoading}
                 className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition"
               >
-                {isLoading ? 'Creating User...' : 'Create User'}
+                {isLoading ? (editUser ? 'Saving...' : 'Creating User...') : (editUser ? 'Save' : 'Create User')}
               </button>
             </div>
           </div>

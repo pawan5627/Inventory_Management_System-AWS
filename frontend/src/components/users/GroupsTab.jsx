@@ -1,15 +1,21 @@
+import { useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
+import AddGroupModal from './AddGroupModal';
 
-export default function GroupsTab({ groups, setGroups }) {
+export default function GroupsTab({ groups, setGroups, roles = [] }) {
+  const [showAddGroup, setShowAddGroup] = useState(false);
+  const [editingGroup, setEditingGroup] = useState(null);
+
   const handleDeleteGroup = (id) => {
     setGroups(groups.filter(g => g.id !== id));
   };
 
   return (
+    <>
     <div className="bg-white rounded-lg shadow">
       <div className="p-4 border-b flex justify-between items-center">
         <h3 className="text-lg font-semibold">Groups</h3>
-        <button className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+        <button onClick={() => { setEditingGroup(null); setShowAddGroup(true); }} className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
           <Plus className="w-4 h-4" />
           <span>Add Group</span>
         </button>
@@ -36,7 +42,7 @@ export default function GroupsTab({ groups, setGroups }) {
                 <td className="p-4 text-gray-600">{group.created}</td>
                 <td className="p-4">
                   <div className="flex items-center space-x-2">
-                    <button className="p-1 hover:bg-gray-100 rounded">
+                    <button className="p-1 hover:bg-gray-100 rounded" onClick={() => { setEditingGroup(group); setShowAddGroup(true); }}>
                       <Edit2 className="w-4 h-4 text-gray-600" />
                     </button>
                     <button 
@@ -53,5 +59,16 @@ export default function GroupsTab({ groups, setGroups }) {
         </table>
       </div>
     </div>
+
+    {showAddGroup && (
+      <AddGroupModal 
+        setShowAddGroup={setShowAddGroup}
+        groups={groups}
+        setGroups={setGroups}
+        editGroup={editingGroup}
+        availableRoles={roles}
+      />
+    )}
+    </>
   );
 }
