@@ -1,17 +1,22 @@
 import { useState } from 'react';
 
-export default function AddCategoryModal({ setShowAddCategory, onSave }) {
-  const [form, setForm] = useState({ id: '', name: '' });
+export default function AddCategoryModal({ setShowAddCategory, onSave, editCategory = null }) {
+  const [form, setForm] = useState({ id: '', name: '', status: 'Active' });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
   };
 
+  // Prefill if editing
+  if (editCategory && form.name === '' ) {
+    setForm({ id: editCategory.id || '', name: editCategory.name || '', status: editCategory.status || 'Active' });
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.name.trim()) return alert('Category name is required');
-    onSave({ id: form.id ? Number(form.id) : undefined, name: form.name.trim() });
+    onSave({ id: form.id ? Number(form.id) : undefined, name: form.name.trim(), status: form.status });
     setShowAddCategory(false);
   };
 
@@ -33,6 +38,17 @@ export default function AddCategoryModal({ setShowAddCategory, onSave }) {
               className="mt-1 w-full border rounded px-3 py-2"
               placeholder="Leave empty to auto-generate"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Status</label>
+            <select
+              value={form.status}
+              onChange={(e) => setForm(prev => ({ ...prev, status: e.target.value }))}
+              className="mt-1 w-full border rounded px-3 py-2"
+            >
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Category Name</label>

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { X, Check } from 'lucide-react';
 
 export default function AddGroupModal({ setShowAddGroup, groups, setGroups, editGroup, availableRoles = [] }) {
-  const [form, setForm] = useState({ id: '', name: '', roles: [] });
+  const [form, setForm] = useState({ idNumber: '', name: '', roles: [], status: 'Active' });
+  const ID_PREFIX = 'GRO-';
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [roleQuery, setRoleQuery] = useState('');
   const roleOptions = useMemo(() => (availableRoles || []).map(r => r.name || r), [availableRoles]);
@@ -10,7 +11,10 @@ export default function AddGroupModal({ setShowAddGroup, groups, setGroups, edit
   // Prefill for edit
   useEffect(() => {
     if (editGroup) {
-      setForm({ id: editGroup.id || '', name: editGroup.name || '', roles: Array.isArray(editGroup.roles) ? editGroup.roles : [] });
+      const existingIdNum = typeof editGroup.id === 'string' && editGroup.id.startsWith(ID_PREFIX)
+        ? editGroup.id.slice(ID_PREFIX.length)
+        : editGroup.id ?? '';
+      setForm({ idNumber: existingIdNum || '', name: editGroup.name || '', roles: Array.isArray(editGroup.roles) ? editGroup.roles : [], status: editGroup.status || 'Active' });
     }
   }, [editGroup]);
 
@@ -31,15 +35,23 @@ export default function AddGroupModal({ setShowAddGroup, groups, setGroups, edit
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.name.trim()) return alert('Group name is required');
-    const idVal = form.id ? Number(form.id) : undefined;
+    const numStr = form.idNumber ? String(form.idNumber).replace(/\D/g, '') : '';
+    const nextNumber = () => {
+      const nums = groups
+        .map(g => typeof g.id === 'string' && g.id.startsWith(ID_PREFIX) ? Number(g.id.slice(ID_PREFIX.length)) : (typeof g.id === 'number' ? g.id : 0))
+        .filter(n => !Number.isNaN(n));
+      const max = nums.length ? Math.max(...nums) : 0;
+      return String(max + 1);
+    };
     const newGroup = {
-      id: idVal ?? (groups.length ? Math.max(...groups.map(g => g.id)) + 1 : 1),
+      id: numStr ? `${ID_PREFIX}${numStr}` : `${ID_PREFIX}${nextNumber()}`,
       name: form.name.trim(),
       description: '',
       members: 0,
       permissions: form.roles.join(', '),
       roles: form.roles,
-      created: new Date().toISOString().slice(0, 10)
+      created: new Date().toISOString().slice(0, 10),
+      status: form.status
     };
 
     if (editGroup) {
@@ -62,13 +74,18 @@ export default function AddGroupModal({ setShowAddGroup, groups, setGroups, edit
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Group ID</label>
-              <input
-                type="number"
-                value={form.id}
-                onChange={(e) => setForm(prev => ({ ...prev, id: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Leave empty to auto-generate"
-              />
+              <div className="flex items-center">
+                <span className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-l-lg text-sm">{ID_PREFIX}</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={form.idNumber}
+                  onChange={(e) => setForm(prev => ({ ...prev, idNumber: e.target.value.replace(/\D/g, '') }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Leave empty to auto-generate"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Group Name <span className="text-red-500">*</span></label>
@@ -128,6 +145,18 @@ export default function AddGroupModal({ setShowAddGroup, groups, setGroups, edit
                 </div>
               )}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              value={form.status}
+              onChange={(e) => setForm(prev => ({ ...prev, status: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
           </div>
 
           <div className="flex justify-end space-x-3 border-t pt-4">

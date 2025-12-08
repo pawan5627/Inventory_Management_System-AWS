@@ -1,19 +1,26 @@
+import { useState } from 'react';
 import { Plus, Edit2, Trash2 } from 'lucide-react';
+import AddDepartmentModal from './AddDepartmentModal';
 
 export default function DepartmentsTab({ departments, setDepartments }) {
+  const [showAddDepartment, setShowAddDepartment] = useState(false);
+  const [editingDepartment, setEditingDepartment] = useState(null);
   const getStatusColor = (status) => {
     return status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
   };
 
   const handleDeleteDepartment = (id) => {
-    setDepartments(departments.filter(d => d.id !== id));
+    const dept = departments.find(d => d.id === id);
+    if (!dept) return;
+    if (!confirm(`Set department "${dept.name}" inactive?`)) return;
+    setDepartments(departments.map(d => d.id === id ? { ...d, status: 'Inactive' } : d));
   };
 
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="p-4 border-b flex justify-between items-center">
         <h3 className="text-lg font-semibold">Departments</h3>
-        <button className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+        <button onClick={() => { setEditingDepartment(null); setShowAddDepartment(true); }} className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
           <Plus className="w-4 h-4" />
           <span>Add Department</span>
         </button>
@@ -46,7 +53,7 @@ export default function DepartmentsTab({ departments, setDepartments }) {
                 </td>
                 <td className="p-4">
                   <div className="flex items-center space-x-2">
-                    <button className="p-1 hover:bg-gray-100 rounded">
+                    <button className="p-1 hover:bg-gray-100 rounded" onClick={() => { setEditingDepartment(dept); setShowAddDepartment(true); }}>
                       <Edit2 className="w-4 h-4 text-gray-600" />
                     </button>
                     <button 
@@ -62,6 +69,15 @@ export default function DepartmentsTab({ departments, setDepartments }) {
           </tbody>
         </table>
       </div>
+
+      {showAddDepartment && (
+        <AddDepartmentModal
+          setShowAddDepartment={setShowAddDepartment}
+          departments={departments}
+          setDepartments={setDepartments}
+          editDepartment={editingDepartment}
+        />
+      )}
     </div>
   );
 }

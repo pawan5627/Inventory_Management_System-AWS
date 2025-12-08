@@ -7,7 +7,15 @@ export default function GroupsTab({ groups, setGroups, roles = [] }) {
   const [editingGroup, setEditingGroup] = useState(null);
 
   const handleDeleteGroup = (id) => {
-    setGroups(groups.filter(g => g.id !== id));
+    const g = groups.find(x => x.id === id);
+    if (!g) return;
+    if (window.confirm(`Set group "${g.name}" inactive?`)) {
+      setGroups(groups.map(x => x.id === id ? { ...x, status: 'Inactive' } : x));
+    }
+  };
+
+  const getStatusColor = (status) => {
+    return status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
   };
 
   return (
@@ -28,6 +36,7 @@ export default function GroupsTab({ groups, setGroups, roles = [] }) {
               <th className="text-left p-4 font-medium text-gray-700">Description</th>
               <th className="text-left p-4 font-medium text-gray-700">Members</th>
               <th className="text-left p-4 font-medium text-gray-700">Permissions</th>
+              <th className="text-left p-4 font-medium text-gray-700">Status</th>
               <th className="text-left p-4 font-medium text-gray-700">Created</th>
               <th className="text-left p-4 font-medium text-gray-700">Actions</th>
             </tr>
@@ -39,6 +48,11 @@ export default function GroupsTab({ groups, setGroups, roles = [] }) {
                 <td className="p-4 text-gray-600">{group.description}</td>
                 <td className="p-4 text-gray-600">{group.members}</td>
                 <td className="p-4 text-gray-600">{group.permissions}</td>
+                <td className="p-4">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(group.status || 'Active')}`}>
+                    {group.status || 'Active'}
+                  </span>
+                </td>
                 <td className="p-4 text-gray-600">{group.created}</td>
                 <td className="p-4">
                   <div className="flex items-center space-x-2">

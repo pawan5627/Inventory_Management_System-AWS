@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 
-export default function AddItemModal({ setShowAddModal, products, setProducts, editProduct = null }) {
+export default function AddItemModal({ setShowAddModal, products, setProducts, categories = [], editProduct = null }) {
   const isEditMode = editProduct !== null;
   
   const [newProduct, setNewProduct] = useState(
@@ -24,7 +24,7 @@ export default function AddItemModal({ setShowAddModal, products, setProducts, e
 
   const [errors, setErrors] = useState({});
 
-  const categories = ['Electronics', 'Stationery', 'Furniture', 'Appliances'];
+  const categoryOptions = categories && categories.length ? categories : ['Electronics', 'Stationery', 'Furniture', 'Appliances'];
 
   const validateForm = () => {
     const newErrors = {};
@@ -176,7 +176,7 @@ export default function AddItemModal({ setShowAddModal, products, setProducts, e
               className={`w-full px-3 py-2 border ${errors.category ? 'border-red-300' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
             >
               <option value="">Select category</option>
-              {categories.map(cat => (
+              {categoryOptions.map(cat => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>

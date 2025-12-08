@@ -5,7 +5,6 @@ import GroupsTab from './GroupsTab';
 import RolesTab from './RolesTab';
 import DepartmentsTab from './DepartmentsTab';
 import CompaniesTab from './CompaniesTab';
-import RoutesTab from './RoutesTab';
 
 export default function UserManagement() {
   const [activeUserTab, setActiveUserTab] = useState('users');
@@ -63,7 +62,6 @@ export default function UserManagement() {
     { id: 'roles', label: 'Roles', icon: Shield },
     { id: 'departments', label: 'Departments', icon: Briefcase },
     { id: 'companies', label: 'Companies', icon: Building2 },
-    { id: 'routes', label: 'Routes', icon: MapPin },
   ];
 
   return (
@@ -92,7 +90,7 @@ export default function UserManagement() {
       {activeUserTab === 'roles' && <RolesTab roles={roles} setRoles={setRoles} />}
       {activeUserTab === 'departments' && <DepartmentsTab departments={departments} setDepartments={setDepartments} />}
       {activeUserTab === 'companies' && <CompaniesTab companies={companies} setCompanies={setCompanies} />}
-      {activeUserTab === 'routes' && <RoutesTab routes={routes} setRoutes={setRoutes} />}
+      {/* Routes page removed */}
     </div>
   );
 }

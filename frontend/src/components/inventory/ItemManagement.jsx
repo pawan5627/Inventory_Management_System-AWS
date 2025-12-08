@@ -9,16 +9,23 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [showAddCategory, setShowAddCategory] = useState(false);
+  const [pendingEditCategory, setPendingEditCategory] = useState(null);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [categories, setCategories] = useState([
+    { name: 'Electronics', description: 'Devices and accessories' },
+    { name: 'Stationery', description: 'Office supplies' },
+    { name: 'Furniture', description: 'Home and office furniture' },
+    { name: 'Appliances', description: 'Kitchen and home appliances' }
+  ]);
 
-  const categories = ['all', 'Electronics', 'Stationery', 'Furniture', 'Appliances'];
-  const categoryRows = [
-    { name: 'Electronics', description: 'Devices and accessories', itemsCount: products.filter(p => p.category === 'Electronics').length },
-    { name: 'Stationery', description: 'Office supplies', itemsCount: products.filter(p => p.category === 'Stationery').length },
-    { name: 'Furniture', description: 'Home and office furniture', itemsCount: products.filter(p => p.category === 'Furniture').length },
-    { name: 'Appliances', description: 'Kitchen and home appliances', itemsCount: products.filter(p => p.category === 'Appliances').length },
-  ];
+  const filterCategories = ['all', ...categories.map(c => c.name)];
+  const categoryRows = categories.map(c => ({
+    name: c.name,
+    description: c.description,
+    itemsCount: products.filter(p => p.category === c.name).length,
+    status: c.status || 'Active'
+  }));
 
   const getStatusColor = (status) => {
     switch(status) {
@@ -41,8 +48,10 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
   });
 
   const handleDeleteProduct = (id) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      setProducts(products.filter(p => p.id !== id));
+    const p = products.find(x => x.id === id);
+    if (!p) return;
+    if (window.confirm(`Set item "${p.name}" inactive?`)) {
+      setProducts(products.map(x => x.id === id ? { ...x, status: 'Inactive' } : x));
     }
   };
 
@@ -89,7 +98,7 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
             {showFilterMenu && (
               <div className="absolute top-16 bg-white border rounded-lg shadow-lg p-4 z-10">
                 <h4 className="font-medium mb-2">Category</h4>
-                {categories.map(cat => (
+                {filterCategories.map(cat => (
                   <label key={cat} className="flex items-center space-x-2 mb-2">
                     <input
                       type="radio"
@@ -220,6 +229,7 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
                   <th className="text-left p-4 font-medium text-gray-700">Category Name</th>
                   <th className="text-left p-4 font-medium text-gray-700">Description</th>
                   <th className="text-left p-4 font-medium text-gray-700">Items Count</th>
+                  <th className="text-left p-4 font-medium text-gray-700">Status</th>
                   <th className="text-left p-4 font-medium text-gray-700">Actions</th>
                 </tr>
               </thead>
@@ -232,14 +242,28 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
                     <td className="p-4 text-gray-600">{cat.description}</td>
                     <td className="p-4 text-gray-600">{cat.itemsCount}</td>
                     <td className="p-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${cat.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {cat.status}
+                      </span>
+                    </td>
+                    <td className="p-4">
                       <div className="flex items-center space-x-2">
                         <button className="p-1 hover:bg-gray-100 rounded" title="View details">
                           <Eye className="w-4 h-4 text-gray-600" />
                         </button>
-                        <button className="p-1 hover:bg-gray-100 rounded" title="Edit category">
+                        <button className="p-1 hover:bg-gray-100 rounded" title="Edit category" onClick={() => {
+                          const existing = categories.find(c => c.name === cat.name);
+                          setShowAddCategory(true);
+                          // pass editCategory via onSave closure by setting a ref-like state
+                          setPendingEditCategory(existing);
+                        }}>
                           <Edit2 className="w-4 h-4 text-blue-600" />
                         </button>
-                        <button className="p-1 hover:bg-gray-100 rounded" title="Delete category">
+                        <button className="p-1 hover:bg-gray-100 rounded" title="Delete category" onClick={() => {
+                          if (window.confirm(`Set category \"${cat.name}\" inactive?`)) {
+                            setCategories(prev => prev.map(c => c.name === cat.name ? { ...c, status: 'Inactive' } : c));
+                          }
+                        }}>
                           <Trash2 className="w-4 h-4 text-red-600" />
                         </button>
                       </div>
@@ -257,15 +281,27 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
           setShowAddModal={handleCloseModal}
           products={products}
           setProducts={setProducts}
+          categories={categories.map(c => c.name)}
           editProduct={editingProduct}
         />
       )}
       {showAddCategory && (
         <AddCategoryModal 
           setShowAddCategory={setShowAddCategory}
+          editCategory={pendingEditCategory || null}
           onSave={(payload) => {
-            // TODO: replace with backend POST /api/categories
-            alert(`Category saved: ${payload.name}${payload.id ? ` (ID ${payload.id})` : ''}`);
+            const name = payload.name;
+            const exists = categories.some(c => c.name.toLowerCase() === name.toLowerCase());
+            if (pendingEditCategory) {
+              setCategories(prev => prev.map(c => c.name === pendingEditCategory.name ? { ...c, name, status: payload.status, description: c.description } : c));
+            } else {
+              if (exists) {
+                alert('Category already exists');
+                return;
+              }
+              setCategories(prev => [...prev, { name, description: '', status: payload.status }]);
+            }
+            setPendingEditCategory(null);
             setShowAddCategory(false);
           }}
         />

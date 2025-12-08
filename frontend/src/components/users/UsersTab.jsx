@@ -11,8 +11,10 @@ export default function UsersTab({ users, setUsers }) {
   };
 
   const handleDeleteUser = (id) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      setUsers(users.filter(u => u.id !== id));
+    const u = users.find(x => x.id === id);
+    if (!u) return;
+    if (window.confirm(`Set user "${u.name}" inactive?`)) {
+      setUsers(users.map(x => x.id === id ? { ...x, status: 'Inactive' } : x));
     }
   };
 
