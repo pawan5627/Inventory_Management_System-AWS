@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { authGet } from '../../apiClient';
 import { Upload, Plus, Eye, Edit2, Trash2, AlertCircle } from 'lucide-react';
 import TableContainer from '../common/TableContainer';
 import FilterRow from '../common/filters/FilterRow';
@@ -27,12 +28,21 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
   useEffect(() => {
     localStorage.setItem('itemFilter_categoryStatus', categoryStatusFilter);
   }, [categoryStatusFilter]);
-  const [categories, setCategories] = useState([
-    { name: 'Electronics', description: 'Devices and accessories' },
-    { name: 'Stationery', description: 'Office supplies' },
-    { name: 'Furniture', description: 'Home and office furniture' },
-    { name: 'Appliances', description: 'Kitchen and home appliances' }
-  ]);
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await authGet('/api/categories');
+        const mapped = (list || []).map(c => ({ name: c.name, description: c.description, status: c.status }));
+        if (!cancelled) setCategories(mapped);
+      } catch (e) {
+        console.warn('Failed categories fetch', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const filterCategories = ['all', ...categories.map(c => c.name)];
   const categoryRows = categories.map(c => ({

@@ -1,7 +1,7 @@
 import { Package, DollarSign, AlertCircle, Users } from 'lucide-react';
 import StatsCard from './StatsCard';
 
-export default function Dashboard({ products, users }) {
+export default function Dashboard({ products, users, departments = [], companies = [] }) {
   const stats = [
     { 
       title: 'Total Products', 
@@ -37,25 +37,28 @@ export default function Dashboard({ products, users }) {
     },
   ];
 
-  const departments = [
-    { id: 1, name: 'Information Technology', employees: 15 },
-    { id: 2, name: 'Sales', employees: 25 },
-    { id: 3, name: 'Human Resources', employees: 8 },
-    { id: 4, name: 'Finance', employees: 12 },
-  ];
-
-  const companies = [
-    { id: 1, name: 'Tech Corp' },
-    { id: 2, name: 'Sales Partners Inc' },
-    { id: 3, name: 'Global Solutions' },
-  ];
-
   const routes = [
     { id: 1, status: 'Active' },
     { id: 2, status: 'Active' },
     { id: 3, status: 'Active' },
     { id: 4, status: 'Active' },
   ];
+
+  const toRelative = (d) => {
+    const ts = Date.parse(d || '');
+    if (!ts) return 'just now';
+    const diffMs = Date.now() - ts;
+    const mins = Math.max(1, Math.floor(diffMs / 60000));
+    if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days === 1 ? '' : 's'} ago`;
+  };
+
+  const lowStock = products.filter(p => p.stock > 0 && p.stock < p.reorderPoint).sort((a,b) => a.stock - b.stock)[0];
+  const outOfStock = products.find(p => p.stock === 0);
+  const newestUser = [...users].sort((a,b) => Date.parse(b.lastLogin || '') - Date.parse(a.lastLogin || ''))[0];
 
   return (
     <div className="p-6">
@@ -69,36 +72,45 @@ export default function Dashboard({ products, users }) {
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm font-medium">New stock received</p>
-                  <p className="text-xs text-gray-500">USB-C Cable - 100 units</p>
+            {newestUser && (
+              <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded">
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                  <div>
+                    <p className="text-sm font-medium">New user activity</p>
+                    <p className="text-xs text-gray-500">{newestUser.name || newestUser.email}</p>
+                  </div>
                 </div>
+                <span className="text-xs text-gray-500">{toRelative(newestUser.lastLogin)}</span>
               </div>
-              <span className="text-xs text-gray-500">2 hours ago</span>
-            </div>
-            <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm font-medium">New user registered</p>
-                  <p className="text-xs text-gray-500">Sarah Wilson - Marketing</p>
+            )}
+            {outOfStock && (
+              <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded">
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <div>
+                    <p className="text-sm font-medium">Out of stock</p>
+                    <p className="text-xs text-gray-500">{outOfStock.name}</p>
+                  </div>
                 </div>
+                <span className="text-xs text-gray-500">{toRelative(outOfStock.lastUpdated)}</span>
               </div>
-              <span className="text-xs text-gray-500">3 hours ago</span>
-            </div>
-            <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm font-medium">Low stock alert</p>
-                  <p className="text-xs text-gray-500">Wireless Mouse - 45 units left</p>
+            )}
+            {lowStock && (
+              <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded">
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <div>
+                    <p className="text-sm font-medium">Low stock alert</p>
+                    <p className="text-xs text-gray-500">{lowStock.name} - {lowStock.stock} units left</p>
+                  </div>
                 </div>
+                <span className="text-xs text-gray-500">{toRelative(lowStock.lastUpdated)}</span>
               </div>
-              <span className="text-xs text-gray-500">5 hours ago</span>
-            </div>
+            )}
+            {!newestUser && !outOfStock && !lowStock && (
+              <div className="text-sm text-gray-500 p-3">No recent activity</div>
+            )}
           </div>
         </div>
 
@@ -115,11 +127,11 @@ export default function Dashboard({ products, users }) {
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Total Departments</span>
-              <span className="text-sm font-semibold">{departments.length}</span>
+              <span className="text-sm font-semibold">{(departments || []).length}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Total Companies</span>
-              <span className="text-sm font-semibold">{companies.length}</span>
+              <span className="text-sm font-semibold">{(companies || []).length}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600">Active Routes</span>

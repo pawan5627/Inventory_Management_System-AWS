@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { SuccessBanner, ErrorBanner } from '../common/banner';
+import { loginWithEmail } from '../../apiClient';
 
 export default function Login({ onNavigate, onLogin }) {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -39,9 +40,12 @@ export default function Login({ onNavigate, onLogin }) {
     if (!validateForm()) return;
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('Login successful:', formData);
-      setShowSuccessBanner(true);
+      const res = await loginWithEmail(formData.email, formData.password);
+      if (res?.token) {
+        setShowSuccessBanner(true);
+      } else {
+        throw new Error('Invalid credentials');
+      }
     } catch (error) {
       setErrorMessage('Invalid credentials. Please try again.');
       setShowErrorBanner(true);

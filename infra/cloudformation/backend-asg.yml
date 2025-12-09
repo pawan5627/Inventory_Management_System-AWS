@@ -1,0 +1,115 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Backend ASG running Node.js API behind Nginx
+Parameters:
+  Env:
+    Type: String
+    Default: ims
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PrivateSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  SecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  TargetGroupArn:
+    Type: String
+  AMI:
+    Type: AWS::EC2::Image::Id
+  InstanceType:
+    Type: String
+    Default: t3.micro
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+  RepositoryUrl:
+    Type: String
+    Default: https://github.com/pawan5627/Inventory_Management_System-AWS.git
+  RDSHost:
+    Type: String
+  RDSPort:
+    Type: String
+    Default: '5432'
+  RDSUser:
+    Type: String
+  RDSPassword:
+    Type: String
+    NoEcho: true
+  RDSDatabase:
+    Type: String
+    Default: inventory_db
+  FrontendOrigin:
+    Type: String
+    Default: https://app.example.com
+  JwtSecret:
+    Type: String
+    Default: CHANGE_ME
+
+Resources:
+  BackendLT:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub '${Env}-backend-lt'
+      LaunchTemplateData:
+        ImageId: !Ref AMI
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyName
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            set -e
+            sudo yum update -y
+            sudo yum install -y git nginx
+            curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo -E bash -
+            sudo yum install -y nodejs
+            sudo npm install -g pm2
+            sudo mkdir -p /opt/app
+            cd /opt/app
+            sudo git clone ${RepositoryUrl} .
+            cd backend
+            sudo npm install --omit=dev
+            sudo mkdir -p /opt/app/backend/src
+            cat << 'EOF' | sudo tee /opt/app/backend/src/.env
+            PORT=4000
+            RDS_HOST=${RDSHost}
+            RDS_PORT=${RDSPort}
+            RDS_USER=${RDSUser}
+            RDS_PASSWORD=${RDSPassword}
+            RDS_DATABASE=${RDSDatabase}
+            RDS_SSL_MODE=require
+            RDS_SSL_REJECT_UNAUTHORIZED=false
+            FRONTEND_ORIGIN=${FrontendOrigin}
+            JWT_SECRET=${JwtSecret}
+            EOF
+            sudo npm run seed:pg || true
+            sudo npm run seed:admin || true
+            sudo pm2 start src/index.js --name inventory-api
+            sudo pm2 save
+            sudo pm2 startup systemd -u root --hp /root | bash
+            cat << 'EOF' | sudo tee /etc/nginx/conf.d/backend.conf
+            server {
+                listen 80 default_server;
+                server_name _;
+                location / { proxy_pass http://127.0.0.1:4000; proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection 'upgrade'; proxy_set_header Host $host; proxy_cache_bypass $http_upgrade; }
+            }
+            EOF
+            sudo systemctl enable nginx
+            sudo systemctl restart nginx
+
+  BackendASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier: !Ref PrivateSubnets
+      DesiredCapacity: 2
+      MinSize: 2
+      MaxSize: 4
+      LaunchTemplate:
+        LaunchTemplateId: !Ref BackendLT
+        Version: !GetAtt BackendLT.LatestVersionNumber
+      TargetGroupARNs:
+        - !Ref TargetGroupArn
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 180
+
+Outputs:
+  BackendASGName:
+    Value: !Ref BackendASG

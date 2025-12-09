@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Tabs from '../components/Tabs';
 import ItemsTable from '../components/ItemsTable';
 import CategoriesTable from '../components/CategoriesTable';
+import { apiGet } from '../apiClient';
 
 export default function ItemManagement() {
   const [active, setActive] = useState('items');
@@ -11,30 +12,59 @@ export default function ItemManagement() {
     { key: 'categories', label: 'Category' },
   ];
 
-  // Placeholder data; later replace with backend fetch
-  const items = [
-    { name: 'Wireless Mouse', sku: 'WM-001', category: 'Electronics', stock: 145, price: '$29.99' },
-    { name: 'USB-C Cable', sku: 'UC-002', category: 'Electronics', stock: 42, price: '$12.99' },
-    { name: 'Notebook A5', sku: 'NB-003', category: 'Stationery', stock: 0, price: '$8.99' },
-    { name: 'Desk Lamp', sku: 'DL-004', category: 'Furniture', stock: 67, price: '$45.99' },
-    { name: 'Coffee Maker', sku: 'CM-005', category: 'Appliances', stock: 23, price: '$89.99' },
-  ];
+  const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const categories = [
-    { name: 'Electronics', description: 'Devices and accessories', itemsCount: 2 },
-    { name: 'Stationery', description: 'Office supplies', itemsCount: 1 },
-    { name: 'Furniture', description: 'Home and office furniture', itemsCount: 1 },
-    { name: 'Appliances', description: 'Kitchen and home appliances', itemsCount: 1 },
-  ];
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      try {
+        const [itemsRes, categoriesRes] = await Promise.all([
+          apiGet('/api/items'),
+          apiGet('/api/categories', true)
+        ]);
+        if (!mounted) return;
+        setItems(itemsRes.map(it => ({
+          name: it.name,
+          sku: it.sku,
+          category: it.category,
+          stock: it.stock,
+          price: `$${Number(it.price).toFixed(2)}`
+        })));
+        setCategories(categoriesRes.map(c => ({
+          name: c.name,
+          description: c.description,
+          itemsCount: c.itemsCount
+        })));
+      } catch (e) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div style={{ padding: 24 }}>
       <h2 style={{ marginBottom: 12 }}>Item Management</h2>
+      {error && (
+        <div style={{ marginBottom: 12, padding: 10, borderRadius: 6, background: '#fee2e2', color: '#b91c1c' }}>
+          {error}
+        </div>
+      )}
+      {loading ? (
+        <div>Loading...</div>
+      ) : (
       <Tabs tabs={tabs} active={active} onChange={setActive} />
       {active === 'items' ? (
         <ItemsTable items={items} />
       ) : (
         <CategoriesTable categories={categories} />
+      )}
       )}
     </div>
   );

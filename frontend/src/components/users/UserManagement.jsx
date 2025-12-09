@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { authGet } from '../../apiClient';
 import { User, Shield, Briefcase, Building2, MapPin } from 'lucide-react';
 import UsersTab from './UsersTab';
 import GroupsTab from './GroupsTab';
@@ -10,43 +11,63 @@ export default function UserManagement() {
   const [activeUserTab, setActiveUserTab] = useState('users');
 
   // Sample data for users
-  const [users, setUsers] = useState([
-    { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Admin', department: 'IT', company: 'Tech Corp', status: 'Active', lastLogin: '2024-11-21 09:30' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Manager', department: 'Sales', company: 'Tech Corp', status: 'Active', lastLogin: '2024-11-21 08:15' },
-    { id: 3, name: 'Bob Johnson', email: 'bob@example.com', role: 'User', department: 'HR', company: 'Tech Corp', status: 'Inactive', lastLogin: '2024-11-19 14:20' },
-    { id: 4, name: 'Alice Brown', email: 'alice@example.com', role: 'Manager', department: 'Finance', company: 'Tech Corp', status: 'Active', lastLogin: '2024-11-20 16:45' },
-  ]);
+  const [users, setUsers] = useState([]);
 
   // Sample data for groups
-  const [groups, setGroups] = useState([
-    { id: 1, name: 'Administrators', description: 'Full system access', members: 5, permissions: 'All', created: '2024-01-15' },
-    { id: 2, name: 'Managers', description: 'Department management access', members: 12, permissions: 'Read, Write, Approve', created: '2024-01-20' },
-    { id: 3, name: 'Employees', description: 'Basic user access', members: 45, permissions: 'Read, Write', created: '2024-01-22' },
-    { id: 4, name: 'Guests', description: 'Limited read-only access', members: 8, permissions: 'Read', created: '2024-02-10' },
-  ]);
+  const [groups, setGroups] = useState([]);
 
   // Sample data for roles
-  const [roles, setRoles] = useState([
-    { id: 1, name: 'Admin', description: 'System administrator', permissions: ['All'], users: 5, created: '2024-01-10' },
-    { id: 2, name: 'Manager', description: 'Department manager', permissions: ['Read', 'Write', 'Approve'], users: 12, created: '2024-01-12' },
-    { id: 3, name: 'User', description: 'Standard user', permissions: ['Read', 'Write'], users: 35, created: '2024-01-14' },
-    { id: 4, name: 'Viewer', description: 'Read-only access', permissions: ['Read'], users: 8, created: '2024-01-16' },
-  ]);
+  const [roles, setRoles] = useState([]);
 
   // Sample data for departments
-  const [departments, setDepartments] = useState([
-    { id: 1, name: 'Information Technology', head: 'John Doe', employees: 15, location: 'Building A', budget: '$500,000', status: 'Active' },
-    { id: 2, name: 'Sales', head: 'Jane Smith', employees: 25, location: 'Building B', budget: '$1,200,000', status: 'Active' },
-    { id: 3, name: 'Human Resources', head: 'Bob Johnson', employees: 8, location: 'Building A', budget: '$300,000', status: 'Active' },
-    { id: 4, name: 'Finance', head: 'Alice Brown', employees: 12, location: 'Building C', budget: '$400,000', status: 'Active' },
-  ]);
+  const [departments, setDepartments] = useState([]);
 
   // Sample data for companies
-  const [companies, setCompanies] = useState([
-    { id: 1, name: 'Tech Corp', industry: 'Technology', employees: 500, revenue: '$50M', location: 'New York', status: 'Active', established: '2010' },
-    { id: 2, name: 'Sales Partners Inc', industry: 'Sales', employees: 150, revenue: '$15M', location: 'Chicago', status: 'Active', established: '2015' },
-    { id: 3, name: 'Global Solutions', industry: 'Consulting', employees: 200, revenue: '$25M', location: 'Los Angeles', status: 'Active', established: '2012' },
-  ]);
+  const [companies, setCompanies] = useState([]);
+
+  // Load live data
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const u = await authGet('/api/users');
+        if (!cancelled) setUsers(u || []);
+      } catch (e) { console.warn('Failed users fetch', e); }
+      try {
+        const d = await authGet('/api/departments');
+        if (!cancelled) setDepartments(d || []);
+      } catch (e) { console.warn('Failed departments fetch', e); }
+      try {
+        const c = await authGet('/api/companies');
+        if (!cancelled) setCompanies(c || []);
+      } catch (e) { console.warn('Failed companies fetch', e); }
+      try {
+        const g = await authGet('/api/groups');
+        const mapped = (g || []).map((grp) => ({
+          id: grp.id || grp.group_id || grp.name,
+          name: grp.name,
+          description: grp.description || '',
+          members: Array.isArray(grp.members) ? grp.members.length : (grp.membersCount || grp.usersCount || 0),
+          permissions: Array.isArray(grp.permissions) ? grp.permissions.join(', ') : (grp.permissions || 'Read'),
+          created: grp.createdAt || grp.created || '',
+        }));
+        if (!cancelled) setGroups(mapped);
+      } catch (e) { console.warn('Failed groups fetch', e); }
+      try {
+        const r = await authGet('/api/roles');
+        const mapped = (r || []).map((role) => ({
+          id: role.id || role.role_id || role.name,
+          name: role.name,
+          description: role.description || '',
+          permissions: role.permissions || [],
+          users: role.usersCount || 0,
+          created: role.createdAt || role.created || '',
+        }));
+        if (!cancelled) setRoles(mapped);
+      } catch (e) { console.warn('Failed roles fetch', e); }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Sample data for routes
   const [routes, setRoutes] = useState([
