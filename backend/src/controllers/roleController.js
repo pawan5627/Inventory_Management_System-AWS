@@ -14,5 +14,14 @@ const listRoles = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { createRole, listRoles };
+const updateRole = async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const updated = await roleService.updateRole(id, req.body);
+    if (!updated) return res.status(404).json({ message: 'Role not found' });
+    res.json(updated);
+  } catch (err) { next(err); }
+};
+
+module.exports = { createRole, listRoles, updateRole };
 

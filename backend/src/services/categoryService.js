@@ -1,29 +1,40 @@
-const { getPool } = require("../config/db");
+const { getPool, getReadPool } = require("../config/db");
 
-// Using groups table as categories (has id, name). If you want a distinct categories table, create it similarly.
+// Now using the dedicated categories table
 
 const listCategories = async () => {
-  const pool = getPool();
+  const pool = getReadPool();
   const { rows } = await pool.query(
-    `SELECT id, name FROM groups ORDER BY id DESC`
+    `SELECT c.id, c.name, c.description, c.status,
+            COALESCE(i.items_count, 0) AS items_count
+       FROM categories c
+       LEFT JOIN (
+         SELECT category_id, COUNT(*) AS items_count
+         FROM items
+         GROUP BY category_id
+       ) i ON i.category_id = c.id
+     ORDER BY c.id DESC`
   );
-  return rows;
+  return rows.map(r => ({
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    status: r.status,
+    itemsCount: Number(r.items_count || 0)
+  }));
 };
 
-const createCategory = async ({ id, name }) => {
+const createCategory = async ({ name, description = null, status = 'Active' }) => {
   const pool = getPool();
-  if (id) {
-    const { rows } = await pool.query(
-      `INSERT INTO groups (id, name) VALUES ($1, $2) RETURNING id, name`,
-      [id, name]
-    );
-    return rows[0];
-  }
   const { rows } = await pool.query(
-    `INSERT INTO groups (name) VALUES ($1) RETURNING id, name`,
-    [name]
+    `INSERT INTO categories (name, description, status)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description, status = EXCLUDED.status
+     RETURNING id, name, description, status`,
+    [name, description, status]
   );
-  return rows[0];
+  const r = rows[0];
+  return { id: r.id, name: r.name, description: r.description, status: r.status };
 };
 
 module.exports = { listCategories, createCategory };

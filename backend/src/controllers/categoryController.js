@@ -11,9 +11,9 @@ const listCategories = async (req, res) => {
 
 const createCategory = async (req, res) => {
   try {
-    const { id, name } = req.body;
+    const { name, description, status } = req.body;
     if (!name) return res.status(400).json({ message: "category name is required" });
-    const created = await categoryService.createCategory({ id, name });
+    const created = await categoryService.createCategory({ name, description, status });
     res.status(201).json(created);
   } catch (err) {
     res.status(400).json({ message: err.message || "Failed to create category" });

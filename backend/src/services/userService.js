@@ -1,15 +1,26 @@
-const { getPool } = require("../config/db");
+const { getPool, getReadPool } = require("../config/db");
 const bcrypt = require("bcryptjs");
 
-const createUser = async ({ username, email, password, companyId }) => {
+const createUser = async ({ username, email, password, departmentCode = null, companyCode = null, name = null, status = 'Active' }) => {
   const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || "10", 10);
   const hashed = await bcrypt.hash(password, saltRounds);
-  const pool = getPool();
+  const pool = getReadPool();
+  // find department/company IDs by code if provided
+  let departmentId = null;
+  let companyId = null;
+  if (departmentCode) {
+    const dep = await pool.query(`SELECT id FROM departments WHERE code = $1`, [departmentCode]);
+    departmentId = dep.rows[0]?.id || null;
+  }
+  if (companyCode) {
+    const comp = await pool.query(`SELECT id FROM companies WHERE code = $1`, [companyCode]);
+    companyId = comp.rows[0]?.id || null;
+  }
   const { rows } = await pool.query(
-    `INSERT INTO users (username, password_hash, created_at)
-     VALUES ($1, $2, NOW())
-     RETURNING id, username`,
-    [username, hashed]
+    `INSERT INTO users (username, password_hash, name, email, status, department_id, company_id, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+     RETURNING id, username, name, email, status, department_id, company_id`,
+    [username, hashed, name, email, status, departmentId, companyId]
   );
   return rows[0];
 };
@@ -29,9 +40,28 @@ const findByUsername = async (username) => {
 const listUsers = async () => {
   const pool = getPool();
   const { rows } = await pool.query(
-    `SELECT id, username, created_at FROM users ORDER BY id DESC`
+    `SELECT u.id, u.username, u.name, u.email, u.status, u.last_login,
+            d.name AS department, c.name AS company,
+            COALESCE(json_agg(json_build_object('id', g.id, 'name', g.name)) FILTER (WHERE g.id IS NOT NULL), '[]') AS groups
+       FROM users u
+       LEFT JOIN departments d ON d.id = u.department_id
+       LEFT JOIN companies c ON c.id = u.company_id
+       LEFT JOIN user_groups ug ON ug.user_id = u.id
+       LEFT JOIN groups g ON g.id = ug.group_id
+     GROUP BY u.id, d.name, c.name
+     ORDER BY u.id DESC`
   );
-  return rows;
+  return rows.map(r => ({
+    id: r.id,
+    username: r.username,
+    name: r.name,
+    email: r.email,
+    status: r.status,
+    lastLogin: r.last_login,
+    department: r.department,
+    company: r.company,
+    groups: r.groups || []
+  }));
 };
 
 const addGroupsToUser = async (userId, groupIds) => {

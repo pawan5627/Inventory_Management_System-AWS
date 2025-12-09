@@ -7,5 +7,6 @@ const { requireRole } = require("../middlewares/rbacMiddleware");
 // only authenticated users with role 'role.create' can create roles
 router.post("/", auth, requireRole("role.create"), roleController.createRole);
 router.get("/", auth, requireRole("role.read"), roleController.listRoles);
+router.put("/:id", auth, requireRole("role.update"), roleController.updateRole);
 
 module.exports = router;
