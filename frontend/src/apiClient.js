@@ -28,6 +28,20 @@ export async function apiPost(path, body, requireAuth = true) {
   return res.json();
 }
 
+export async function apiPut(path, body, requireAuth = true) {
+  const jwt = localStorage.getItem('jwt');
+  const headers = { 'Content-Type': 'application/json' };
+  if (requireAuth && jwt) headers['Authorization'] = `Bearer ${jwt}`;
+  const res = await fetch(`${API_BASE}${path}`, { method: 'PUT', headers, body: JSON.stringify(body) });
+  if (res.status === 401) {
+    const err = new Error(`PUT ${path} unauthorized`);
+    err.status = 401;
+    throw err;
+  }
+  if (!res.ok) throw new Error(`PUT ${path} failed: ${res.status}`);
+  return res.json();
+}
+
 export async function loginWithEmail(email, password) {
   // Backend accepts identifier (email or username)
   const identifier = email;
@@ -42,6 +56,7 @@ export async function loginWithEmail(email, password) {
 // Convenience wrappers that automatically use stored JWT when requireAuth=true
 export const authGet = (path) => apiGet(path, true);
 export const authPost = (path, body) => apiPost(path, body, true);
+export const authPut = (path, body) => apiPut(path, body, true);
 
 // Provide a small utility to wrap calls and react to 401s
 export function withUnauthorizedHandler(onUnauthorized) {
@@ -51,6 +66,9 @@ export function withUnauthorizedHandler(onUnauthorized) {
     },
     post: async (path, body) => {
       try { return await authPost(path, body); } catch (e) { if (e.status === 401) onUnauthorized?.(e); throw e; }
+    },
+    put: async (path, body) => {
+      try { return await authPut(path, body); } catch (e) { if (e.status === 401) onUnauthorized?.(e); throw e; }
     },
   };
 }

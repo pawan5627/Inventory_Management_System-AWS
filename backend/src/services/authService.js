@@ -7,7 +7,7 @@ const login = async (identifier, password) => {
   const { rows } = await pool.query(
     `SELECT u.id, u.username, u.email, u.password_hash
        FROM users u
-      WHERE u.username = $1 OR u.email = $1
+      WHERE LOWER(u.username) = LOWER($1) OR LOWER(u.email) = LOWER($1)
       LIMIT 1`,
     [identifier]
   );

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { authPost } from '../../apiClient';
+import { authGet, authPost, authPut } from '../../apiClient';
 import { X } from 'lucide-react';
 import { SuccessBanner, ErrorBanner } from '../common/banner';
 
@@ -11,9 +11,9 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
     email: '',
     password: '',
     confirmPassword: '',
-    group: '',
-    department: '',
-    company: '',
+    groupId: '',
+    departmentCode: '',
+    companyCode: '',
     status: 'Active'
   });
 
@@ -28,9 +28,9 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
         email: editUser.email || '',
         password: '',
         confirmPassword: '',
-        group: editUser.group || '',
-        department: editUser.department || '',
-        company: editUser.company || '',
+        groupId: '',
+        departmentCode: '',
+        companyCode: '',
         status: editUser.status || 'Active'
       });
     }
@@ -44,9 +44,31 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
   const [showErrorBanner, setShowErrorBanner] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const groups = ['Admins', 'Managers', 'Users', 'Viewers'];
-  const departments = ['IT', 'Sales', 'HR', 'Finance', 'Marketing', 'Operations'];
-  const companies = ['Tech Corp', 'Sales Partners Inc', 'Global Solutions'];
+  const [groups, setGroups] = useState([]); // {id,name}
+  const [departments, setDepartments] = useState([]); // {id,code,name}
+  const [companies, setCompanies] = useState([]); // {id,code,name}
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchMeta = async () => {
+      try {
+        const [gr, deps, comps] = await Promise.all([
+          authGet('/api/groups'),
+          authGet('/api/departments'),
+          authGet('/api/companies')
+        ]);
+        if (!cancelled) {
+          setGroups(gr || []);
+          setDepartments(deps || []);
+          setCompanies(comps || []);
+        }
+      } catch (e) {
+        console.warn('Failed to fetch groups/departments/companies', e);
+      }
+    };
+    fetchMeta();
+    return () => { cancelled = true; };
+  }, []);
 
   const getPasswordStrength = () => {
     const password = formData.password;
@@ -100,9 +122,9 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
       newErrors.confirmPassword = 'Passwords do not match';
     }
     
-    if (!formData.group) newErrors.group = 'Group is required';
-    if (!formData.department) newErrors.department = 'Department is required';
-    if (!formData.company) newErrors.company = 'Company is required';
+    if (!formData.groupId) newErrors.groupId = 'Group is required';
+    if (!formData.departmentCode) newErrors.departmentCode = 'Department is required';
+    if (!formData.companyCode) newErrors.companyCode = 'Company is required';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -129,17 +151,27 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
         email: formData.email,
         password: formData.password,
         name: `${formData.firstName} ${formData.lastName}`,
-        status: formData.status
-        // Optionally include departmentCode/companyCode if mapping exists
+        status: formData.status,
+        departmentCode: formData.departmentCode,
+        companyCode: formData.companyCode
       };
       const created = await authPost('/api/users', body);
+      // Try to assign group membership; ignore failures to not block UX
+      try {
+        await authPut(`/api/users/${created.id}/groups`, { groupIds: [formData.groupId] });
+      } catch (e) {
+        console.warn('Group assignment failed', e);
+      }
+      const groupName = (groups.find(g => String(g.id) === String(formData.groupId)) || {}).name || '';
+      const deptName = (departments.find(d => d.code === formData.departmentCode) || {}).name || '';
+      const companyName = (companies.find(c => c.code === formData.companyCode) || {}).name || '';
       const newUser = {
         id: created.id,
         name: created.name,
         email: created.email,
-        group: formData.group,
-        department: formData.department,
-        company: formData.company,
+        group: groupName,
+        department: deptName,
+        company: companyName,
         status: created.status,
         lastLogin: new Date().toISOString().slice(0, 16).replace('T', ' ')
       };
@@ -275,19 +307,19 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
                       Group <span className="text-red-500">*</span>
                     </label>
                     <select
-                      name="group"
-                      value={formData.group}
+                      name="groupId"
+                      value={formData.groupId}
                       onChange={handleChange}
                       className={`w-full px-3 py-2 border ${
-                        errors.group ? 'border-red-300' : 'border-gray-300'
+                        errors.groupId ? 'border-red-300' : 'border-gray-300'
                       } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     >
                       <option value="">Select group</option>
                       {groups.map(group => (
-                        <option key={group} value={group}>{group}</option>
+                        <option key={group.id} value={group.id}>{group.name}</option>
                       ))}
                     </select>
-                    {errors.group && <p className="mt-1 text-sm text-red-600">{errors.group}</p>}
+                    {errors.groupId && <p className="mt-1 text-sm text-red-600">{errors.groupId}</p>}
                   </div>
 
                   <div>
@@ -295,19 +327,19 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
                       Department <span className="text-red-500">*</span>
                     </label>
                     <select
-                      name="department"
-                      value={formData.department}
+                      name="departmentCode"
+                      value={formData.departmentCode}
                       onChange={handleChange}
                       className={`w-full px-3 py-2 border ${
-                        errors.department ? 'border-red-300' : 'border-gray-300'
+                        errors.departmentCode ? 'border-red-300' : 'border-gray-300'
                       } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     >
                       <option value="">Select department</option>
                       {departments.map(dept => (
-                        <option key={dept} value={dept}>{dept}</option>
+                        <option key={dept.code} value={dept.code}>{dept.name}</option>
                       ))}
                     </select>
-                    {errors.department && <p className="mt-1 text-sm text-red-600">{errors.department}</p>}
+                    {errors.departmentCode && <p className="mt-1 text-sm text-red-600">{errors.departmentCode}</p>}
                   </div>
 
                   <div>
@@ -315,19 +347,19 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
                       Company <span className="text-red-500">*</span>
                     </label>
                     <select
-                      name="company"
-                      value={formData.company}
+                      name="companyCode"
+                      value={formData.companyCode}
                       onChange={handleChange}
                       className={`w-full px-3 py-2 border ${
-                        errors.company ? 'border-red-300' : 'border-gray-300'
+                        errors.companyCode ? 'border-red-300' : 'border-gray-300'
                       } rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500`}
                     >
                       <option value="">Select company</option>
                       {companies.map(company => (
-                        <option key={company} value={company}>{company}</option>
+                        <option key={company.code} value={company.code}>{company.name}</option>
                       ))}
                     </select>
-                    {errors.company && <p className="mt-1 text-sm text-red-600">{errors.company}</p>}
+                    {errors.companyCode && <p className="mt-1 text-sm text-red-600">{errors.companyCode}</p>}
                   </div>
 
                   <div>
