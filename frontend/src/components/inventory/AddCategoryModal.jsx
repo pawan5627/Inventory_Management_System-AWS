@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { authPost, authPut } from '../../apiClient';
 
 export default function AddCategoryModal({ setShowAddCategory, onSave, editCategory = null }) {
   const [form, setForm] = useState({ id: '', name: '', status: 'Active' });
@@ -13,11 +14,28 @@ export default function AddCategoryModal({ setShowAddCategory, onSave, editCateg
     setForm({ id: editCategory.id || '', name: editCategory.name || '', status: editCategory.status || 'Active' });
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) return alert('Category name is required');
-    onSave({ id: form.id ? Number(form.id) : undefined, name: form.name.trim(), status: form.status });
-    setShowAddCategory(false);
+    
+    try {
+      const payload = { name: form.name.trim(), status: form.status, description: '' };
+      
+      if (editCategory && editCategory.id) {
+        // Update existing category
+        await authPut(`/api/categories/${editCategory.id}`, payload);
+      } else {
+        // Create new category
+        await authPost('/api/categories', payload);
+      }
+      
+      // Call onSave callback to update parent state
+      onSave({ id: form.id ? Number(form.id) : undefined, name: form.name.trim(), status: form.status });
+      setShowAddCategory(false);
+    } catch (error) {
+      console.error('Failed to save category:', error);
+      alert(`Failed to ${editCategory ? 'update' : 'create'} category: ${error.message}`);
+    }
   };
 
   return (

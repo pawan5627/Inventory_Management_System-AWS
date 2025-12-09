@@ -308,17 +308,14 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
         <AddCategoryModal 
           setShowAddCategory={setShowAddCategory}
           editCategory={pendingEditCategory || null}
-          onSave={(payload) => {
-            const name = payload.name;
-            const exists = categories.some(c => c.name.toLowerCase() === name.toLowerCase());
-            if (pendingEditCategory) {
-              setCategories(prev => prev.map(c => c.name === pendingEditCategory.name ? { ...c, name, status: payload.status, description: c.description } : c));
-            } else {
-              if (exists) {
-                alert('Category already exists');
-                return;
-              }
-              setCategories(prev => [...prev, { name, description: '', status: payload.status }]);
+          onSave={async (payload) => {
+            // Refetch categories from backend after save
+            try {
+              const list = await authGet('/api/categories');
+              const mapped = (list || []).map(c => ({ name: c.name, description: c.description, status: c.status }));
+              setCategories(mapped);
+            } catch (e) {
+              console.warn('Failed to refetch categories', e);
             }
             setPendingEditCategory(null);
             setShowAddCategory(false);

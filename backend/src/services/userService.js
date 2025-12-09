@@ -82,4 +82,83 @@ const addGroupsToUser = async (userId, groupIds) => {
   return { id: userId, groupsAdded: groupIds };
 };
 
-module.exports = { createUser, findByUsername, listUsers, addGroupsToUser };
+const updateUser = async (userId, { name, email, status, departmentCode, companyCode, password }) => {
+  const pool = getPool();
+  
+  // Check if user exists
+  const userCheck = await pool.query(`SELECT id FROM users WHERE id = $1`, [userId]);
+  if (!userCheck.rowCount) throw new Error("User not found");
+
+  // Build dynamic update
+  const updates = [];
+  const values = [];
+  let paramCount = 1;
+
+  if (name !== undefined) {
+    updates.push(`name = $${paramCount++}`);
+    values.push(name);
+  }
+  if (email !== undefined) {
+    updates.push(`email = $${paramCount++}`);
+    values.push(email);
+  }
+  if (status !== undefined) {
+    updates.push(`status = $${paramCount++}`);
+    values.push(status);
+  }
+
+  // Handle department
+  if (departmentCode !== undefined) {
+    let departmentId = null;
+    if (departmentCode) {
+      const dep = await pool.query(`SELECT id FROM departments WHERE code = $1`, [departmentCode]);
+      departmentId = dep.rows[0]?.id || null;
+    }
+    updates.push(`department_id = $${paramCount++}`);
+    values.push(departmentId);
+  }
+
+  // Handle company
+  if (companyCode !== undefined) {
+    let companyId = null;
+    if (companyCode) {
+      const comp = await pool.query(`SELECT id FROM companies WHERE code = $1`, [companyCode]);
+      companyId = comp.rows[0]?.id || null;
+    }
+    updates.push(`company_id = $${paramCount++}`);
+    values.push(companyId);
+  }
+
+  // Handle password update
+  if (password !== undefined && password) {
+    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || "10", 10);
+    const hashed = await bcrypt.hash(password, saltRounds);
+    updates.push(`password_hash = $${paramCount++}`);
+    values.push(hashed);
+  }
+
+  if (updates.length === 0) {
+    throw new Error('No fields to update');
+  }
+
+  values.push(userId);
+  await pool.query(
+    `UPDATE users SET ${updates.join(', ')} WHERE id = $${paramCount}`,
+    values
+  );
+
+  // Return updated user
+  const { rows } = await pool.query(
+    `SELECT u.id, u.username, u.name, u.email, u.status, u.last_login,
+            d.name AS department, c.name AS company
+     FROM users u
+     LEFT JOIN departments d ON d.id = u.department_id
+     LEFT JOIN companies c ON c.id = u.company_id
+     WHERE u.id = $1`,
+    [userId]
+  );
+
+  return rows[0] || null;
+};
+
+module.exports = { createUser, findByUsername, listUsers, addGroupsToUser, updateUser };

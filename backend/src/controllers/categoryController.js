@@ -20,4 +20,17 @@ const createCategory = async (req, res) => {
   }
 };
 
-module.exports = { listCategories, createCategory };
+const updateCategory = async (req, res) => {
+  try {
+    const { name, description, status } = req.body;
+    const updated = await categoryService.updateCategory(req.params.id, { name, description, status });
+    if (!updated) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ message: err.message || "Failed to update category" });
+  }
+};
+
+module.exports = { listCategories, createCategory, updateCategory };

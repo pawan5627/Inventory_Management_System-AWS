@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import { authPost, authPut } from '../../apiClient';
 
 export default function AddItemModal({ setShowAddModal, products, setProducts, categories = [], editProduct = null }) {
   const isEditMode = editProduct !== null;
@@ -79,47 +80,42 @@ export default function AddItemModal({ setShowAddModal, products, setProducts, c
     }
   };
 
-  const handleAddProduct = () => {
+  const handleAddProduct = async () => {
     if (!validateForm()) return;
     
     const stock = parseInt(newProduct.stock) || 0;
     const reorderPoint = parseInt(newProduct.reorderPoint) || 0;
+    const price = parseFloat(newProduct.price) || 0;
+    const status = stock === 0 ? 'Out of Stock' : 
+                   stock < reorderPoint ? 'Low Stock' : 'In Stock';
     
-    if (isEditMode) {
-      // Update existing product
-      const updatedProduct = {
-        ...editProduct,
+    try {
+      const payload = {
         name: newProduct.name,
         sku: newProduct.sku,
         category: newProduct.category,
         stock: stock,
         reorderPoint: reorderPoint,
-        price: parseFloat(newProduct.price) || 0,
-        status: stock === 0 ? 'Out of Stock' : 
-                stock < reorderPoint ? 'Low Stock' : 'In Stock',
-        lastUpdated: new Date().toISOString().split('T')[0]
+        price: price,
+        status: status
       };
+
+      if (isEditMode) {
+        // Update existing product via API
+        const updated = await authPut(`/api/items/${editProduct.id}`, payload);
+        setProducts(products.map(p => p.id === editProduct.id ? updated : p));
+      } else {
+        // Add new product via API
+        const created = await authPost('/api/items', payload);
+        setProducts([...products, created]);
+      }
       
-      setProducts(products.map(p => p.id === editProduct.id ? updatedProduct : p));
-    } else {
-      // Add new product
-      const product = {
-        id: products.length + 1,
-        name: newProduct.name,
-        sku: newProduct.sku,
-        category: newProduct.category,
-        stock: stock,
-        reorderPoint: reorderPoint,
-        price: parseFloat(newProduct.price) || 0,
-        status: stock === 0 ? 'Out of Stock' : 
-                stock < reorderPoint ? 'Low Stock' : 'In Stock',
-        lastUpdated: new Date().toISOString().split('T')[0]
-      };
-      setProducts([...products, product]);
+      setNewProduct({ name: '', sku: '', category: '', stock: '', reorderPoint: '', price: '' });
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Failed to save item:', error);
+      alert(`Failed to ${isEditMode ? 'update' : 'create'} item: ${error.message}`);
     }
-    
-    setNewProduct({ name: '', sku: '', category: '', stock: '', reorderPoint: '', price: '' });
-    setShowAddModal(false);
   };
 
   return (

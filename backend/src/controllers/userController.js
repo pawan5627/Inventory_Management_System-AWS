@@ -21,4 +21,14 @@ const addGroups = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { createUser, listUsers, addGroups };
+const updateUser = async (req, res, next) => {
+  try {
+    const updated = await userService.updateUser(req.params.id, req.body);
+    if (!updated) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json(updated);
+  } catch (err) { next(err); }
+};
+
+module.exports = { createUser, listUsers, addGroups, updateUser };
