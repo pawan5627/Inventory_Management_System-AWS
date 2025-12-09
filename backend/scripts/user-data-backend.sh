@@ -34,7 +34,7 @@ npm ci --only=production || npm install --production
 # Create env file
 cat > src/.env <<'EOF'
 PORT=4000
-FRONTEND_ORIGIN=*
+FRONTEND_ORIGIN=https://d2n61sfstcgqqd.cloudfront.net
 
 RDS_HOST=
 RDS_PORT=5432
