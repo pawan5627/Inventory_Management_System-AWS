@@ -66,3 +66,17 @@ Attach `Authorization: Bearer <JWT>` for protected endpoints.
 - Dual DB pools: writer for mutations, reader for list queries.
 - SSL can be toggled via `RDS_SSL_MODE` and `RDS_SSL_REJECT_UNAUTHORIZED`.
 - CORS is restricted to `FRONTEND_ORIGIN`.
+
+### EC2/ALB Deployment TLS
+- For strict TLS to RDS on EC2:
+	- Set in `src/.env`:
+		- `RDS_SSL_MODE=require`
+		- `RDS_SSL_REJECT_UNAUTHORIZED=true`
+		- `RDS_SSL_CA_PATH=/opt/app/backend/rds-ca.pem`
+		- Optionally `RDS_SSL_SERVERNAME=<your RDS cluster/writer endpoint>` if using reader endpoint for connections.
+	- Download the region CA bundle at boot:
+		- `curl -fsSL -o /opt/app/backend/rds-ca.pem https://truststore.pki.rds.amazonaws.com/us-east-1/us-east-1-bundle.pem`
+	- Restart app after env changes: `pm2 restart inventory-api --update-env`.
+
+### Launch Template user data
+- Use `backend/scripts/user-data-backend.sh` to bootstrap EC2 instances (Node, PM2, Nginx, repo clone, CA bundle, `.env`). Update `.env` values via LT or SSM parameters.
