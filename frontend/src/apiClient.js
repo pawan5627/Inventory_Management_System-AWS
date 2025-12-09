@@ -29,9 +29,9 @@ export async function apiPost(path, body, requireAuth = true) {
 }
 
 export async function loginWithEmail(email, password) {
-  // Backend expects username; pass email as username for now
-  const username = typeof email === 'string' && email.includes('@') ? email.split('@')[0] : email;
-  const data = await apiPost('/api/auth/login', { username, password }, false);
+  // Backend accepts identifier (email or username)
+  const identifier = email;
+  const data = await apiPost('/api/auth/login', { identifier, password }, false);
   if (data?.token) {
     localStorage.setItem('jwt', data.token);
     if (data.user) localStorage.setItem('user', JSON.stringify(data.user));

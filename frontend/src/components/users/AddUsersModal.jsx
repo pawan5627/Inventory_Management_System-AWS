@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { authPost } from '../../apiClient';
 import { X } from 'lucide-react';
 import { SuccessBanner, ErrorBanner } from '../common/banner';
 
@@ -121,33 +122,37 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
     
     setIsLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      const newUser = {
-        id: users.length + 1,
-        name: `${formData.firstName} ${formData.lastName}`,
+      // Create user in backend (requires admin role)
+      const username = (formData.email || '').split('@')[0];
+      const body = {
+        username,
         email: formData.email,
+        password: formData.password,
+        name: `${formData.firstName} ${formData.lastName}`,
+        status: formData.status
+        // Optionally include departmentCode/companyCode if mapping exists
+      };
+      const created = await authPost('/api/users', body);
+      const newUser = {
+        id: created.id,
+        name: created.name,
+        email: created.email,
         group: formData.group,
         department: formData.department,
         company: formData.company,
-        status: formData.status,
+        status: created.status,
         lastLogin: new Date().toISOString().slice(0, 16).replace('T', ' ')
       };
       if (editUser) {
-        // Update existing
         setUsers(users.map(u => u.id === editUser.id ? { ...u, ...newUser, id: editUser.id } : u));
       } else {
         setUsers([...users, newUser]);
       }
       setShowSuccessBanner(true);
-      
-      // Close modal after success
       setTimeout(() => {
         setShowSuccessBanner(false);
         setShowAddModal(false);
       }, 2000);
-      
     } catch (error) {
       setErrorMessage('Failed to create user. Please try again.');
       setShowErrorBanner(true);

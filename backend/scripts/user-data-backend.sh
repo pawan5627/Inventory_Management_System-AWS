@@ -31,6 +31,9 @@ git config --global --add safe.directory "$APP_DIR"
 cd backend
 npm ci --only=production || npm install --production
 
+# Verify runtime dependencies (e.g., dotenv) exist; retry install if missing
+node -e "require('dotenv')" >/dev/null 2>&1 || npm install --production
+
 # Create env file
 cat > src/.env <<'EOF'
 PORT=4000

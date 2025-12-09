@@ -2,14 +2,14 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const { getPool } = require("../config/db");
 
-const login = async (username, password) => {
+const login = async (identifier, password) => {
   const pool = getPool();
   const { rows } = await pool.query(
-    `SELECT u.id, u.username, u.password_hash
+    `SELECT u.id, u.username, u.email, u.password_hash
        FROM users u
-      WHERE u.username = $1
+      WHERE u.username = $1 OR u.email = $1
       LIMIT 1`,
-    [username]
+    [identifier]
   );
   const user = rows[0];
   if (!user) throw new Error("Invalid credentials");
@@ -36,7 +36,7 @@ const login = async (username, password) => {
 
   const secret = process.env.JWT_SECRET || 'dev-secret';
   const token = jwt.sign(payload, secret, { expiresIn: process.env.JWT_EXPIRES_IN || "7d" });
-  return { token, user: { id: user.id, username: user.username, roles: payload.roles } };
+  return { token, user: { id: user.id, username: user.username, email: user.email, roles: payload.roles } };
 };
 
 module.exports = { login };

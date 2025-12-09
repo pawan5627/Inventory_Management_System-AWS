@@ -4,7 +4,8 @@ const bcrypt = require("bcryptjs");
 const createUser = async ({ username, email, password, departmentCode = null, companyCode = null, name = null, status = 'Active' }) => {
   const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || "10", 10);
   const hashed = await bcrypt.hash(password, saltRounds);
-  const pool = getReadPool();
+  // Use writer pool for consistency on inserts and related lookups
+  const pool = getPool();
   // find department/company IDs by code if provided
   let departmentId = null;
   let companyId = null;
