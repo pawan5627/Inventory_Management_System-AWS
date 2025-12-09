@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, Upload, X } from 'lucide-react';
-import { authGet, authPut } from '../../apiClient';
+import { authGet, authPut, API_BASE } from '../../apiClient';
 
 export default function Profile({ initialUser = { firstName: 'Admin', lastName: '', email: 'admin@example.com' } }) {
   const [firstName, setFirstName] = useState(initialUser.firstName || '');
@@ -12,6 +12,7 @@ export default function Profile({ initialUser = { firstName: 'Admin', lastName: 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [avatarDataUrl, setAvatarDataUrl] = useState('');
+  const [avatarRemoteUrl, setAvatarRemoteUrl] = useState('');
   const [loading, setLoading] = useState(true);
 
   // Load profile from backend
@@ -24,6 +25,7 @@ export default function Profile({ initialUser = { firstName: 'Admin', lastName: 
         setEmail(profile.email || '');
         setPhone(profile.phone || '');
         setLocation(profile.location || '');
+        if (profile.avatarUrl) setAvatarRemoteUrl(profile.avatarUrl);
       } catch (error) {
         console.warn('Failed to load profile:', error);
         // Keep initial values if API fails
@@ -70,13 +72,33 @@ export default function Profile({ initialUser = { firstName: 'Admin', lastName: 
         payload.newPassword = newPassword;
       }
       
+      // Save basic profile fields
       await authPut('/api/profile', payload);
-      
-      // Persist avatar locally
-      if (avatarDataUrl) {
+
+      // If a new avatar was selected, upload to S3 via backend and persist
+      if (avatarDataUrl && avatarDataUrl.startsWith('data:')) {
+        // Convert data URL to Blob
+        const [meta, b64] = avatarDataUrl.split(',');
+        const contentType = (meta.match(/data:(.*?);/) || [null, 'image/png'])[1];
+        const binary = atob(b64);
+        const len = binary.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], { type: contentType });
+
+        // 1) Get presigned upload URL
+        const urlRes = await authGet(`/api/profile/avatar/upload-url?contentType=${encodeURIComponent(contentType)}`);
+        const { uploadUrl, key } = urlRes;
+
+        // 2) Upload to S3 directly
+        const putRes = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': contentType }, body: blob });
+        if (!putRes.ok) throw new Error(`Avatar upload failed: ${putRes.status}`);
+
+        // 3) Persist avatar on backend
+        const updated = await authPut('/api/profile/avatar', { key });
+        if (updated?.avatarUrl) setAvatarRemoteUrl(updated.avatarUrl);
+        // Also cache locally for instant UI
         localStorage.setItem('profileAvatar', avatarDataUrl);
-      } else {
-        localStorage.removeItem('profileAvatar');
       }
       
       // Clear password fields after successful save
@@ -129,6 +151,8 @@ export default function Profile({ initialUser = { firstName: 'Admin', lastName: 
             <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center text-gray-700 text-lg font-semibold select-none overflow-hidden">
               {avatarDataUrl ? (
                 <img src={avatarDataUrl} alt="avatar" className="w-full h-full object-cover" />
+              ) : avatarRemoteUrl ? (
+                <img src={avatarRemoteUrl} alt="avatar" className="w-full h-full object-cover" />
               ) : (
                 initials || <User className="w-8 h-8" />
               )}
