@@ -162,3 +162,32 @@ const updateUser = async (userId, { name, email, status, departmentCode, company
 };
 
 module.exports = { createUser, findByUsername, listUsers, addGroupsToUser, updateUser };
+ 
+const updateUserMeta = async (userId, { departmentCode = null, companyCode = null, status = null, name = null, email = null }) => {
+  const pool = getPool();
+  let departmentId = null;
+  let companyId = null;
+  if (departmentCode) {
+    const dep = await pool.query(`SELECT id FROM departments WHERE code = $1`, [departmentCode]);
+    departmentId = dep.rows[0]?.id || null;
+  }
+  if (companyCode) {
+    const comp = await pool.query(`SELECT id FROM companies WHERE code = $1`, [companyCode]);
+    companyId = comp.rows[0]?.id || null;
+  }
+  const fields = [];
+  const values = [];
+  let idx = 1;
+  if (name !== null) { fields.push(`name = $${idx++}`); values.push(name); }
+  if (email !== null) { fields.push(`email = $${idx++}`); values.push(email); }
+  if (status !== null) { fields.push(`status = $${idx++}`); values.push(status); }
+  if (departmentCode !== null) { fields.push(`department_id = $${idx++}`); values.push(departmentId); }
+  if (companyCode !== null) { fields.push(`company_id = $${idx++}`); values.push(companyId); }
+  if (!fields.length) return await pool.query(`SELECT id, username, name, email, status, department_id, company_id FROM users WHERE id = $1`, [userId]).then(r => r.rows[0]);
+  values.push(userId);
+  const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, username, name, email, status, department_id, company_id`;
+  const { rows } = await pool.query(sql, values);
+  return rows[0];
+};
+
+module.exports.updateUserMeta = updateUserMeta;

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { requestPasswordReset } from '../../apiClient';
 
 export default function ForgotPassword({ onNavigate }) {
   const [email, setEmail] = useState('');
@@ -24,15 +25,18 @@ export default function ForgotPassword({ onNavigate }) {
     setIsLoading(true);
     setError('');
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('Password reset email sent to:', email);
+      const res = await requestPasswordReset(email);
+      // Show success and present the reset URL for testing
       setIsSuccess(true);
+      setResetUrl(res?.resetUrl || '');
     } catch (error) {
       setError('Failed to send reset email. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  const [resetUrl, setResetUrl] = useState('');
 
   if (isSuccess) {
     return (
@@ -47,6 +51,11 @@ export default function ForgotPassword({ onNavigate }) {
           <p className="text-gray-600">
             We've sent a password reset link to <span className="font-medium text-gray-900">{email}</span>
           </p>
+          {resetUrl && (
+            <p className="text-sm text-gray-600 break-all">
+              Test link: <a href={resetUrl} className="text-indigo-600 underline">{resetUrl}</a>
+            </p>
+          )}
           <p className="text-sm text-gray-500">
             Didn't receive the email? Check your spam folder or try again.
           </p>

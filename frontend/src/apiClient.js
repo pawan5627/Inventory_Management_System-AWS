@@ -92,3 +92,16 @@ export function withUnauthorizedHandler(onUnauthorized) {
 }
 
 export { API_BASE };
+
+// Auth helpers
+export async function signupUser({ email, password, name }) {
+  return apiPost('/api/auth/signup', { email, password, name }, false);
+}
+
+export async function requestPasswordReset(email) {
+  return apiPost('/api/auth/forgot-password', { email }, false);
+}
+
+export async function resetPasswordWithToken(token, password) {
+  return apiPost('/api/auth/reset-password', { token, password }, false);
+}

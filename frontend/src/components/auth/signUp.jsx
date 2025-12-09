@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { SuccessBanner, ErrorBanner } from '../common/banner';
+import { signupUser } from '../../apiClient';
 
 export default function SignUp({ onNavigate }) {
   const [formData, setFormData] = useState({
@@ -21,14 +22,8 @@ export default function SignUp({ onNavigate }) {
   const [showErrorBanner, setShowErrorBanner] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   
-  // Mock groups - in production, fetch from backend
-  const availableGroups = [
-    { id: 1, name: 'Admin' },
-    { id: 2, name: 'Manager' },
-    { id: 3, name: 'Warehouse Staff' },
-    { id: 4, name: 'Sales Team' },
-    { id: 5, name: 'Viewer' }
-  ];
+  // Groups are assigned server-side (default: employees)
+  const availableGroups = [ { id: 'default', name: 'Default (employees)' } ];
 
   const getPasswordStrength = () => {
     const password = formData.password;
@@ -95,18 +90,9 @@ export default function SignUp({ onNavigate }) {
     if (!validateForm()) return;
     setIsLoading(true);
     try {
-      // Simulate API call to backend
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Simulate random success/failure for demo
-      const isSuccess = Math.random() > 0.2; // 80% success rate
-      
-      if (isSuccess) {
-        console.log('User created successfully:', formData);
-        setShowSuccessBanner(true);
-      } else {
-        throw new Error('Backend error occurred');
-      }
+      const name = [formData.firstName, formData.lastName].filter(Boolean).join(' ');
+      const res = await signupUser({ email: formData.email, password: formData.password, name });
+      if (res?.id) setShowSuccessBanner(true); else throw new Error('Signup failed');
     } catch (error) {
       console.error('User creation failed:', error);
       setErrorMessage('Failed to create user. Please try again or contact support.');

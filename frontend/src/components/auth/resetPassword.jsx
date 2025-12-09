@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SuccessBanner, ErrorBanner } from '../common/banner';
+import { resetPasswordWithToken } from '../../apiClient';
 
-export default function ResetPassword({ onNavigate }) {
+export default function ResetPassword({ onNavigate, token: propToken }) {
   const [formData, setFormData] = useState({
     password: '',
     confirmPassword: ''
@@ -13,6 +14,20 @@ export default function ResetPassword({ onNavigate }) {
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [showErrorBanner, setShowErrorBanner] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [token, setToken] = useState(propToken || '');
+
+  useEffect(() => {
+    if (!propToken) {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get('token') || params.get('reset_token');
+      const v = params.get('view');
+      if (t) setToken(t);
+      // auto-switch if URL indicates reset view
+      if (v === 'reset' && !propToken) {
+        // no-op; App.jsx should render this component on selection
+      }
+    }
+  }, [propToken]);
 
   const getPasswordStrength = () => {
     const password = formData.password;
@@ -70,18 +85,8 @@ export default function ResetPassword({ onNavigate }) {
     if (!validateForm()) return;
     setIsLoading(true);
     try {
-      // Simulate API call - replace with actual backend call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Simulate success/failure for demo
-      const isSuccess = Math.random() > 0.2; // 80% success rate
-      
-      if (isSuccess) {
-        console.log('Password reset successful');
-        setShowSuccessBanner(true);
-      } else {
-        throw new Error('Backend error occurred');
-      }
+      await resetPasswordWithToken(token, formData.password);
+      setShowSuccessBanner(true);
     } catch (error) {
       console.error('Password reset failed:', error);
       setErrorMessage('Failed to reset password. Please try again or request a new reset link.');

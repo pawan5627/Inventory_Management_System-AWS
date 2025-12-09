@@ -1,10 +1,28 @@
 const { getPool } = require("../config/db");
 const bcrypt = require("bcryptjs");
 
+// Ensure the users table has an avatar_url column (idempotent)
+const ensureAvatarColumn = async () => {
+  const pool = getPool();
+  await pool.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name='users' AND column_name='avatar_url'
+      ) THEN
+        ALTER TABLE users ADD COLUMN avatar_url TEXT;
+      END IF;
+    END$$;
+  `);
+};
+
 const getProfile = async (userId) => {
   const pool = getPool();
+  await ensureAvatarColumn();
   const { rows } = await pool.query(
     `SELECT u.id, u.username, u.name, u.email, u.phone, u.location,
+            u.avatar_url,
             d.name AS department, c.name AS company
      FROM users u
      LEFT JOIN departments d ON d.id = u.department_id
@@ -29,6 +47,7 @@ const getProfile = async (userId) => {
     email: user.email,
     phone: user.phone || '',
     location: user.location || '',
+    avatarUrl: user.avatar_url || '',
     department: user.department || '',
     company: user.company || ''
   };
@@ -95,4 +114,11 @@ const updateProfile = async (userId, { firstName, lastName, phone, location, cur
   return await getProfile(userId);
 };
 
-module.exports = { getProfile, updateProfile };
+const setAvatarUrl = async (userId, avatarUrl) => {
+  const pool = getPool();
+  await ensureAvatarColumn();
+  await pool.query(`UPDATE users SET avatar_url = $1 WHERE id = $2`, [avatarUrl, userId]);
+  return await getProfile(userId);
+};
+
+module.exports = { getProfile, updateProfile, setAvatarUrl };

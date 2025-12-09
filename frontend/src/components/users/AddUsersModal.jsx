@@ -12,42 +12,64 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
     password: '',
     confirmPassword: '',
     groupId: '',
-    departmentCode: '',
-    companyCode: '',
-    status: 'Active'
-  });
+      const groupName = (groups.find(g => String(g.id) === String(formData.groupId)) || {}).name || '';
+      const deptName = (departments.find(d => d.code === formData.departmentCode) || {}).name || '';
+      const companyName = (companies.find(c => c.code === formData.companyCode) || {}).name || '';
 
-  // Prefill when editing
-  useEffect(() => {
-    if (editUser) {
-      const [firstName = '', lastName = ''] = (editUser.name || '').split(' ');
-      setFormData({
-        firstName,
-        lastName,
-        employeeId: editUser.employeeId || '',
-        email: editUser.email || '',
-        password: '',
-        confirmPassword: '',
-        groupId: '',
-        departmentCode: '',
-        companyCode: '',
-        status: editUser.status || 'Active'
-      });
-    }
-  }, [editUser]);
-  
-  const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [showSuccessBanner, setShowSuccessBanner] = useState(false);
-  const [showErrorBanner, setShowErrorBanner] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-
-  const [groups, setGroups] = useState([]); // {id,name}
-  const [departments, setDepartments] = useState([]); // {id,code,name}
-  const [companies, setCompanies] = useState([]); // {id,code,name}
-
+      if (editUser) {
+        // Update existing user metadata
+        const upd = await authPut(`/api/users/${editUser.id}`, {
+          name: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          status: formData.status,
+          departmentCode: formData.departmentCode,
+          companyCode: formData.companyCode,
+          password: formData.password ? formData.password : undefined
+        });
+        // Assign group
+        try {
+          await authPut(`/api/users/${editUser.id}/groups`, { groupIds: [formData.groupId] });
+        } catch (e) { console.warn('Group assignment failed', e); }
+        const updatedRow = {
+          id: editUser.id,
+          name: upd.name,
+          email: upd.email,
+          group: groupName,
+          department: deptName,
+          company: companyName,
+          status: upd.status,
+          lastLogin: editUser.lastLogin || ''
+        };
+        setUsers(users.map(u => u.id === editUser.id ? { ...u, ...updatedRow } : u));
+      } else {
+        // Create user in backend (requires admin role)
+        const username = (formData.email || '').split('@')[0];
+        const body = {
+          username,
+          email: formData.email,
+          password: formData.password,
+          name: `${formData.firstName} ${formData.lastName}`,
+          status: formData.status,
+          departmentCode: formData.departmentCode,
+          companyCode: formData.companyCode
+        };
+        const created = await authPost('/api/users', body);
+        // Try to assign group membership; ignore failures to not block UX
+        try {
+          await authPut(`/api/users/${created.id}/groups`, { groupIds: [formData.groupId] });
+        } catch (e) { console.warn('Group assignment failed', e); }
+        const newUser = {
+          id: created.id,
+          name: created.name,
+          email: created.email,
+          group: groupName,
+          department: deptName,
+          company: companyName,
+          status: created.status,
+          lastLogin: new Date().toISOString().slice(0, 16).replace('T', ' ')
+        };
+        setUsers([...users, newUser]);
+      }
   useEffect(() => {
     let cancelled = false;
     const fetchMeta = async () => {
