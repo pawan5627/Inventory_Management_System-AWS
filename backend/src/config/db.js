@@ -20,6 +20,7 @@ const connectDB = async () => {
     }
 
     const rejectUnauthorized = process.env.RDS_SSL_REJECT_UNAUTHORIZED === "false" ? false : true;
+    const sslServername = process.env.RDS_SSL_SERVERNAME || RDS_HOST;
     let ssl = false;
     if (RDS_SSL_MODE === "require") {
       const caPath = process.env.RDS_SSL_CA_PATH;
@@ -31,13 +32,13 @@ const connectDB = async () => {
             ? path.join(process.env.HOME || process.env.USERPROFILE || '', caPath.slice(1))
             : path.resolve(caPath);
           const ca = fs.readFileSync(resolved, 'utf8');
-          ssl = { ca, rejectUnauthorized };
+          ssl = { ca, rejectUnauthorized, servername: sslServername };
         } catch (e) {
           console.warn('Could not read CA file at', caPath, '- proceeding without CA');
-          ssl = { rejectUnauthorized };
+          ssl = { rejectUnauthorized, servername: sslServername };
         }
       } else {
-        ssl = { rejectUnauthorized };
+        ssl = { rejectUnauthorized, servername: sslServername };
       }
     }
     pool = new Pool({
