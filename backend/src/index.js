@@ -31,6 +31,11 @@ app.use("/api/items", itemRoutes);
 app.use("/api/departments", departmentRoutes);
 app.use("/api/companies", companyRoutes);
 
+// Health check for ALB Target Group
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 4000;
