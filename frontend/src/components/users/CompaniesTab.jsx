@@ -15,11 +15,18 @@ export default function CompaniesTab({ companies, setCompanies }) {
     return status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
   };
 
-  const handleDeleteCompany = (id) => {
+  const handleDeleteCompany = async (id) => {
     const c = companies.find(x => x.id === id);
     if (!c) return;
     if (!confirm(`Set company "${c.name}" inactive?`)) return;
-    setCompanies(companies.map(x => x.id === id ? { ...x, status: 'Inactive' } : x));
+    try {
+      const { authPut } = await import('../../apiClient');
+      await authPut(`/api/companies/${id}`, { status: 'Inactive' });
+      setCompanies(companies.map(x => x.id === id ? { ...x, status: 'Inactive' } : x));
+    } catch (error) {
+      console.error('Failed to update company status:', error);
+      alert('Failed to update company status. Please try again.');
+    }
   };
 
   return (

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { apiPost } from '../../apiClient';
 
 export default function ForgotPassword({ onNavigate }) {
   const [email, setEmail] = useState('');
@@ -24,11 +25,16 @@ export default function ForgotPassword({ onNavigate }) {
     setIsLoading(true);
     setError('');
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('Password reset email sent to:', email);
+      const response = await apiPost('/api/auth/forgot-password', { email }, false);
+      console.log('Password reset response:', response);
+      // Log the reset link for testing (remove in production)
+      if (response.resetLink) {
+        console.log('Password reset link:', response.resetLink);
+      }
       setIsSuccess(true);
     } catch (error) {
-      setError('Failed to send reset email. Please try again.');
+      console.error('Failed to send reset email:', error);
+      setError(error.message || 'Failed to send reset email. Please try again.');
     } finally {
       setIsLoading(false);
     }

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SuccessBanner, ErrorBanner } from '../common/banner';
+import { apiGet, apiPost } from '../../apiClient';
 
 export default function SignUp({ onNavigate }) {
   const [formData, setFormData] = useState({
@@ -20,15 +21,22 @@ export default function SignUp({ onNavigate }) {
   const [showSuccessBanner, setShowSuccessBanner] = useState(false);
   const [showErrorBanner, setShowErrorBanner] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  
-  // Mock groups - in production, fetch from backend
-  const availableGroups = [
-    { id: 1, name: 'Admin' },
-    { id: 2, name: 'Manager' },
-    { id: 3, name: 'Warehouse Staff' },
-    { id: 4, name: 'Sales Team' },
-    { id: 5, name: 'Viewer' }
-  ];
+  const [availableGroups, setAvailableGroups] = useState([]);
+
+  // Fetch groups from backend
+  useEffect(() => {
+    const fetchGroups = async () => {
+      try {
+        const groups = await apiGet('/api/groups');
+        setAvailableGroups(groups || []);
+      } catch (error) {
+        console.error('Failed to fetch groups:', error);
+        // Fallback to empty array
+        setAvailableGroups([]);
+      }
+    };
+    fetchGroups();
+  }, []);
 
   const getPasswordStrength = () => {
     const password = formData.password;
@@ -95,21 +103,25 @@ export default function SignUp({ onNavigate }) {
     if (!validateForm()) return;
     setIsLoading(true);
     try {
-      // Simulate API call to backend
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Simulate random success/failure for demo
-      const isSuccess = Math.random() > 0.2; // 80% success rate
-      
-      if (isSuccess) {
-        console.log('User created successfully:', formData);
-        setShowSuccessBanner(true);
-      } else {
-        throw new Error('Backend error occurred');
-      }
+      // Call backend API
+      const signupData = {
+        username: formData.email.split('@')[0], // Generate username from email
+        email: formData.email,
+        password: formData.password,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        employeeId: formData.employeeId,
+        departmentCode: formData.department || null,
+        companyCode: formData.company || null,
+        groupId: formData.assignedGroup || null
+      };
+
+      await apiPost('/api/auth/signup', signupData, false);
+      console.log('User created successfully:', formData);
+      setShowSuccessBanner(true);
     } catch (error) {
       console.error('User creation failed:', error);
-      setErrorMessage('Failed to create user. Please try again or contact support.');
+      setErrorMessage(error.message || 'Failed to create user. Please try again or contact support.');
       setShowErrorBanner(true);
     } finally {
       setIsLoading(false);

@@ -21,4 +21,14 @@ const addRoles = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { createGroup, listGroups, addRoles };
+const updateGroup = async (req, res, next) => {
+  try {
+    const updated = await groupService.updateGroup(req.params.id, req.body);
+    if (!updated) {
+      return res.status(404).json({ message: 'Group not found' });
+    }
+    res.json(updated);
+  } catch (err) { next(err); }
+};
+
+module.exports = { createGroup, listGroups, addRoles, updateGroup };

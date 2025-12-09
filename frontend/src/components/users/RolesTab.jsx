@@ -16,11 +16,18 @@ export default function RolesTab({ roles, setRoles }) {
     return status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
   };
 
-  const handleDeleteRole = (id) => {
+  const handleDeleteRole = async (id) => {
     const r = roles.find(x => x.id === id);
     if (!r) return;
     if (window.confirm(`Set role "${r.name}" inactive?`)) {
-      setRoles(roles.map(x => x.id === id ? { ...x, status: 'Inactive' } : x));
+      try {
+        const { authPut } = await import('../../apiClient');
+        await authPut(`/api/roles/${id}`, { status: 'Inactive' });
+        setRoles(roles.map(x => x.id === id ? { ...x, status: 'Inactive' } : x));
+      } catch (error) {
+        console.error('Failed to update role status:', error);
+        alert('Failed to update role status. Please try again.');
+      }
     }
   };
 

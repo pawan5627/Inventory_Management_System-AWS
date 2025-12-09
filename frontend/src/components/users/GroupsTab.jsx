@@ -12,11 +12,18 @@ export default function GroupsTab({ groups, setGroups, roles = [] }) {
   const [statusFilter, setStatusFilter] = useState(() => localStorage.getItem('groupsFilter_status') || 'all');
   useEffect(() => { localStorage.setItem('groupsFilter_status', statusFilter); }, [statusFilter]);
 
-  const handleDeleteGroup = (id) => {
+  const handleDeleteGroup = async (id) => {
     const g = groups.find(x => x.id === id);
     if (!g) return;
     if (window.confirm(`Set group "${g.name}" inactive?`)) {
-      setGroups(groups.map(x => x.id === id ? { ...x, status: 'Inactive' } : x));
+      try {
+        const { authPut } = await import('../../apiClient');
+        await authPut(`/api/groups/${id}`, { status: 'Inactive' });
+        setGroups(groups.map(x => x.id === id ? { ...x, status: 'Inactive' } : x));
+      } catch (error) {
+        console.error('Failed to update group status:', error);
+        alert('Failed to update group status. Please try again.');
+      }
     }
   };
 

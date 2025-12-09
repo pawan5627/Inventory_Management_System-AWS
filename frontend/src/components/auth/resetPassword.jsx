@@ -1,7 +1,19 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SuccessBanner, ErrorBanner } from '../common/banner';
+import { apiPost } from '../../apiClient';
 
 export default function ResetPassword({ onNavigate }) {
+  const [resetToken, setResetToken] = useState('');
+  
+  // Extract token from URL on component mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    if (token) {
+      setResetToken(token);
+    }
+  }, []);
+
   const [formData, setFormData] = useState({
     password: '',
     confirmPassword: ''
@@ -68,23 +80,24 @@ export default function ResetPassword({ onNavigate }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+    
+    if (!resetToken) {
+      setErrorMessage('Invalid reset token. Please request a new password reset link.');
+      setShowErrorBanner(true);
+      return;
+    }
+    
     setIsLoading(true);
     try {
-      // Simulate API call - replace with actual backend call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Simulate success/failure for demo
-      const isSuccess = Math.random() > 0.2; // 80% success rate
-      
-      if (isSuccess) {
-        console.log('Password reset successful');
-        setShowSuccessBanner(true);
-      } else {
-        throw new Error('Backend error occurred');
-      }
+      await apiPost('/api/auth/reset-password', {
+        token: resetToken,
+        password: formData.password
+      }, false);
+      console.log('Password reset successful');
+      setShowSuccessBanner(true);
     } catch (error) {
       console.error('Password reset failed:', error);
-      setErrorMessage('Failed to reset password. Please try again or request a new reset link.');
+      setErrorMessage(error.message || 'Failed to reset password. Please try again or request a new reset link.');
       setShowErrorBanner(true);
     } finally {
       setIsLoading(false);
