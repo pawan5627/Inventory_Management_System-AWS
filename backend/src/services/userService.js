@@ -1,19 +1,18 @@
 const { getPool, getReadPool } = require("../config/db");
 const bcrypt = require("bcryptjs");
 
-const createUser = async ({ username, email, password, departmentCode = null, companyCode = null, name = null, status = 'Active' }) => {
+const createUser = async ({ username, email, password, departmentCode = null, companyCode = null, departmentId = null, companyId = null, name = null, status = 'Active' }) => {
   const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || "10", 10);
   const hashed = await bcrypt.hash(password, saltRounds);
   // Use writer pool for consistency on inserts and related lookups
   const pool = getPool();
   // find department/company IDs by code if provided
-  let departmentId = null;
-  let companyId = null;
-  if (departmentCode) {
+  // Prefer explicit IDs if provided; else resolve by codes
+  if (!departmentId && departmentCode) {
     const dep = await pool.query(`SELECT id FROM departments WHERE code = $1`, [departmentCode]);
     departmentId = dep.rows[0]?.id || null;
   }
-  if (companyCode) {
+  if (!companyId && companyCode) {
     const comp = await pool.query(`SELECT id FROM companies WHERE code = $1`, [companyCode]);
     companyId = comp.rows[0]?.id || null;
   }
@@ -82,7 +81,7 @@ const addGroupsToUser = async (userId, groupIds) => {
   return { id: userId, groupsAdded: groupIds };
 };
 
-const updateUser = async (userId, { name, email, status, departmentCode, companyCode, password }) => {
+const updateUser = async (userId, { name, email, status, departmentCode, companyCode, departmentId, companyId, password }) => {
   const pool = getPool();
   
   // Check if user exists
@@ -108,25 +107,29 @@ const updateUser = async (userId, { name, email, status, departmentCode, company
   }
 
   // Handle department
-  if (departmentCode !== undefined) {
-    let departmentId = null;
-    if (departmentCode) {
+  if (departmentId !== undefined || departmentCode !== undefined) {
+    let depId = null;
+    if (departmentId) {
+      depId = departmentId;
+    } else if (departmentCode) {
       const dep = await pool.query(`SELECT id FROM departments WHERE code = $1`, [departmentCode]);
-      departmentId = dep.rows[0]?.id || null;
+      depId = dep.rows[0]?.id || null;
     }
     updates.push(`department_id = $${paramCount++}`);
-    values.push(departmentId);
+    values.push(depId);
   }
 
   // Handle company
-  if (companyCode !== undefined) {
-    let companyId = null;
-    if (companyCode) {
+  if (companyId !== undefined || companyCode !== undefined) {
+    let compId = null;
+    if (companyId) {
+      compId = companyId;
+    } else if (companyCode) {
       const comp = await pool.query(`SELECT id FROM companies WHERE code = $1`, [companyCode]);
-      companyId = comp.rows[0]?.id || null;
+      compId = comp.rows[0]?.id || null;
     }
     updates.push(`company_id = $${paramCount++}`);
-    values.push(companyId);
+    values.push(compId);
   }
 
   // Handle password update
