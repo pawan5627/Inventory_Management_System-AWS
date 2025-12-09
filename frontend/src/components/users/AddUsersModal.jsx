@@ -427,7 +427,7 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Password {editUser ? '(leave blank to keep current)' : <span className="text-red-500">*</span>}
+                      Password {editUser ? '(leave blank to keep current)' : (<span className="text-red-500">*</span>)}
                     </label>
                     <div className="relative">
                       <input
@@ -507,7 +507,7 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Confirm Password {editUser ? '' : <span className="text-red-500">*</span>}
+                      Confirm Password {!editUser && (<span className="text-red-500">*</span>)}
                     </label>
                     <div className="relative">
                       <input

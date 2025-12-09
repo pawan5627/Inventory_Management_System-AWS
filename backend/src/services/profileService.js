@@ -65,7 +65,12 @@ const updateProfile = async (userId, { firstName, lastName, phone, location, cur
   }
 
   // Handle password change
-  if (newPassword && currentPassword) {
+  if (newPassword || currentPassword) {
+    // Both must be provided to change password
+    if (!newPassword || !currentPassword) {
+      throw new Error('Both current password and new password are required to change password');
+    }
+    
     const currentHash = userCheck.rows[0].password_hash;
     const isValid = await bcrypt.compare(currentPassword, currentHash);
     

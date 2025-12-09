@@ -130,7 +130,7 @@ const updateUser = async (userId, { name, email, status, departmentCode, company
   }
 
   // Handle password update
-  if (password !== undefined && password) {
+  if (password) {
     const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS || "10", 10);
     const hashed = await bcrypt.hash(password, saltRounds);
     updates.push(`password_hash = $${paramCount++}`);
