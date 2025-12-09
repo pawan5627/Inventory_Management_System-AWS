@@ -10,4 +10,7 @@ router.get("/", auth, requireRole("group.read"), categoryController.listCategori
 // Create category (ID and name)
 router.post("/", auth, requireRole("group.create"), categoryController.createCategory);
 
+// Update category
+router.put("/:id", auth, requireRole("group.update"), categoryController.updateCategory);
+
 module.exports = router;

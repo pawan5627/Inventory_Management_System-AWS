@@ -37,4 +37,36 @@ const createCategory = async ({ name, description = null, status = 'Active' }) =
   return { id: r.id, name: r.name, description: r.description, status: r.status };
 };
 
-module.exports = { listCategories, createCategory };
+const updateCategory = async (id, { name, description, status }) => {
+  const pool = getPool();
+  const updates = [];
+  const values = [];
+  let paramCount = 1;
+
+  if (name !== undefined) {
+    updates.push(`name = $${paramCount++}`);
+    values.push(name);
+  }
+  if (description !== undefined) {
+    updates.push(`description = $${paramCount++}`);
+    values.push(description);
+  }
+  if (status !== undefined) {
+    updates.push(`status = $${paramCount++}`);
+    values.push(status);
+  }
+
+  if (updates.length === 0) {
+    throw new Error('No fields to update');
+  }
+
+  values.push(id);
+  const { rows } = await pool.query(
+    `UPDATE categories SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING id, name, description, status`,
+    values
+  );
+
+  return rows[0] || null;
+};
+
+module.exports = { listCategories, createCategory, updateCategory };

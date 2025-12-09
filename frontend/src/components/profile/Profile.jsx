@@ -1,23 +1,45 @@
 import { useState, useEffect } from 'react';
 import { User, Upload, X } from 'lucide-react';
+import { authGet, authPut } from '../../apiClient';
 
 export default function Profile({ initialUser = { firstName: 'Admin', lastName: '', email: 'admin@example.com' } }) {
   const [firstName, setFirstName] = useState(initialUser.firstName || '');
   const [lastName, setLastName] = useState(initialUser.lastName || '');
-  const [email] = useState(initialUser.email || '');
+  const [email, setEmail] = useState(initialUser.email || '');
   const [phone, setPhone] = useState(initialUser.phone || '');
   const [location, setLocation] = useState(initialUser.location || '');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [avatarDataUrl, setAvatarDataUrl] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // Load profile from backend
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const profile = await authGet('/api/profile');
+        setFirstName(profile.firstName || '');
+        setLastName(profile.lastName || '');
+        setEmail(profile.email || '');
+        setPhone(profile.phone || '');
+        setLocation(profile.location || '');
+      } catch (error) {
+        console.warn('Failed to load profile:', error);
+        // Keep initial values if API fails
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProfile();
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem('profileAvatar');
     if (saved) setAvatarDataUrl(saved);
   }, []);
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     if (newPassword || confirmPassword) {
       if (newPassword !== confirmPassword) {
@@ -28,14 +50,45 @@ export default function Profile({ initialUser = { firstName: 'Admin', lastName: 
         alert('New password must be at least 8 characters');
         return;
       }
+      if (!currentPassword) {
+        alert('Current password is required to change password');
+        return;
+      }
     }
-    // Persist avatar locally
-    if (avatarDataUrl) {
-      localStorage.setItem('profileAvatar', avatarDataUrl);
-    } else {
-      localStorage.removeItem('profileAvatar');
+    
+    try {
+      const payload = {
+        firstName,
+        lastName,
+        phone,
+        location
+      };
+      
+      // Include password fields if user wants to change password
+      if (newPassword && currentPassword) {
+        payload.currentPassword = currentPassword;
+        payload.newPassword = newPassword;
+      }
+      
+      await authPut('/api/profile', payload);
+      
+      // Persist avatar locally
+      if (avatarDataUrl) {
+        localStorage.setItem('profileAvatar', avatarDataUrl);
+      } else {
+        localStorage.removeItem('profileAvatar');
+      }
+      
+      // Clear password fields after successful save
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      
+      alert('Profile saved successfully');
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+      alert(`Failed to save profile: ${error.message}`);
     }
-    alert('Profile saved');
   };
 
   const initials = `${(firstName || 'A')[0] || 'A'}${(lastName || '')[0] || ''}`.toUpperCase();
@@ -57,6 +110,16 @@ export default function Profile({ initialUser = { firstName: 'Admin', lastName: 
     };
     reader.readAsDataURL(file);
   };
+
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="bg-white rounded-lg shadow p-6 max-w-3xl mx-auto text-center">
+          Loading profile...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">

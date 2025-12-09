@@ -102,9 +102,11 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
       newErrors.email = 'Email already exists';
     }
     
-    if (!formData.password) {
+    // Password is only required when creating a new user
+    if (!editUser && !formData.password) {
       newErrors.password = 'Password is required';
-    } else {
+    } else if (formData.password) {
+      // Validate password if provided
       if (formData.password.length < 8) {
         newErrors.password = 'Password must be at least 8 characters';
       } else if (!/[A-Z]/.test(formData.password) || !/[a-z]/.test(formData.password)) {
@@ -116,9 +118,10 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
       }
     }
     
-    if (!formData.confirmPassword) {
+    // Confirm password only required if password is provided
+    if (formData.password && !formData.confirmPassword) {
       newErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
+    } else if (formData.password && formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
     
@@ -144,49 +147,88 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
     
     setIsLoading(true);
     try {
-      // Create user in backend (requires admin role)
-      const username = (formData.email || '').split('@')[0];
-      const body = {
-        username,
-        email: formData.email,
-        password: formData.password,
-        name: `${formData.firstName} ${formData.lastName}`,
-        status: formData.status,
-        departmentCode: formData.departmentCode,
-        companyCode: formData.companyCode
-      };
-      const created = await authPost('/api/users', body);
-      // Try to assign group membership; ignore failures to not block UX
-      try {
-        await authPut(`/api/users/${created.id}/groups`, { groupIds: [formData.groupId] });
-      } catch (e) {
-        console.warn('Group assignment failed', e);
-      }
       const groupName = (groups.find(g => String(g.id) === String(formData.groupId)) || {}).name || '';
       const deptName = (departments.find(d => d.code === formData.departmentCode) || {}).name || '';
       const companyName = (companies.find(c => c.code === formData.companyCode) || {}).name || '';
-      const newUser = {
-        id: created.id,
-        name: created.name,
-        email: created.email,
-        group: groupName,
-        department: deptName,
-        company: companyName,
-        status: created.status,
-        lastLogin: new Date().toISOString().slice(0, 16).replace('T', ' ')
-      };
+      
       if (editUser) {
-        setUsers(users.map(u => u.id === editUser.id ? { ...u, ...newUser, id: editUser.id } : u));
+        // Update existing user
+        const updateBody = {
+          name: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          status: formData.status,
+          departmentCode: formData.departmentCode,
+          companyCode: formData.companyCode
+        };
+        
+        // Only include password if provided
+        if (formData.password) {
+          updateBody.password = formData.password;
+        }
+        
+        const updated = await authPut(`/api/users/${editUser.id}`, updateBody);
+        
+        // Try to assign group membership
+        try {
+          await authPut(`/api/users/${editUser.id}/groups`, { groupIds: [formData.groupId] });
+        } catch (e) {
+          console.warn('Group assignment failed', e);
+        }
+        
+        const updatedUser = {
+          id: editUser.id,
+          name: updated.name,
+          email: updated.email,
+          group: groupName,
+          department: deptName,
+          company: companyName,
+          status: updated.status,
+          lastLogin: editUser.lastLogin
+        };
+        
+        setUsers(users.map(u => u.id === editUser.id ? updatedUser : u));
       } else {
+        // Create new user in backend (requires admin role)
+        const username = (formData.email || '').split('@')[0];
+        const body = {
+          username,
+          email: formData.email,
+          password: formData.password,
+          name: `${formData.firstName} ${formData.lastName}`,
+          status: formData.status,
+          departmentCode: formData.departmentCode,
+          companyCode: formData.companyCode
+        };
+        const created = await authPost('/api/users', body);
+        
+        // Try to assign group membership; ignore failures to not block UX
+        try {
+          await authPut(`/api/users/${created.id}/groups`, { groupIds: [formData.groupId] });
+        } catch (e) {
+          console.warn('Group assignment failed', e);
+        }
+        
+        const newUser = {
+          id: created.id,
+          name: created.name,
+          email: created.email,
+          group: groupName,
+          department: deptName,
+          company: companyName,
+          status: created.status,
+          lastLogin: new Date().toISOString().slice(0, 16).replace('T', ' ')
+        };
+        
         setUsers([...users, newUser]);
       }
+      
       setShowSuccessBanner(true);
       setTimeout(() => {
         setShowSuccessBanner(false);
         setShowAddModal(false);
       }, 2000);
     } catch (error) {
-      setErrorMessage('Failed to create user. Please try again.');
+      setErrorMessage(`Failed to ${editUser ? 'update' : 'create'} user. Please try again.`);
       setShowErrorBanner(true);
     } finally {
       setIsLoading(false);
@@ -385,7 +427,7 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Password <span className="text-red-500">*</span>
+                      Password {editUser ? '(leave blank to keep current)' : (<span className="text-red-500">*</span>)}
                     </label>
                     <div className="relative">
                       <input
@@ -465,7 +507,7 @@ export default function AddUserModal({ setShowAddModal, users, setUsers, editUse
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Confirm Password <span className="text-red-500">*</span>
+                      Confirm Password {!editUser && (<span className="text-red-500">*</span>)}
                     </label>
                     <div className="relative">
                       <input

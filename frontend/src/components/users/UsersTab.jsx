@@ -132,7 +132,10 @@ export default function UsersTab({ users, setUsers }) {
 
       {showAddModal && (
         <AddUserModal 
-          setShowAddModal={setShowAddModal}
+          setShowAddModal={(show) => {
+            setShowAddModal(show);
+            if (!show) setEditingUser(null);
+          }}
           users={users}
           setUsers={setUsers}
           editUser={editingUser}

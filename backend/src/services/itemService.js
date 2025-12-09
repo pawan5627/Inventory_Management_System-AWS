@@ -47,4 +47,59 @@ const getItemById = async (id) => {
   return rows[0] || null;
 };
 
-module.exports = { listItems, createItem, getItemById };
+const updateItem = async (id, data) => {
+  const pool = getPool();
+  
+  // Get category ID if category name is provided
+  let categoryId = null;
+  if (data.category) {
+    const catRow = await pool.query(`SELECT id FROM categories WHERE name = $1 LIMIT 1`, [data.category]);
+    categoryId = catRow.rows[0]?.id || null;
+  }
+
+  // Build dynamic update query
+  const updates = [];
+  const values = [];
+  let paramCount = 1;
+
+  if (data.name !== undefined) {
+    updates.push(`name = $${paramCount++}`);
+    values.push(data.name);
+  }
+  if (data.sku !== undefined) {
+    updates.push(`sku = $${paramCount++}`);
+    values.push(data.sku);
+  }
+  if (categoryId !== null || data.category !== undefined) {
+    updates.push(`category_id = $${paramCount++}`);
+    values.push(categoryId);
+  }
+  if (data.stock !== undefined) {
+    updates.push(`stock = $${paramCount++}`);
+    values.push(data.stock);
+  }
+  if (data.reorderPoint !== undefined) {
+    updates.push(`reorder_point = $${paramCount++}`);
+    values.push(data.reorderPoint);
+  }
+  if (data.price !== undefined) {
+    updates.push(`price = $${paramCount++}`);
+    values.push(data.price);
+  }
+  if (data.status !== undefined) {
+    updates.push(`status = $${paramCount++}`);
+    values.push(data.status);
+  }
+  
+  updates.push(`last_updated = CURRENT_DATE`);
+  values.push(id);
+
+  await pool.query(
+    `UPDATE items SET ${updates.join(', ')} WHERE id = $${paramCount}`,
+    values
+  );
+
+  return await getItemById(id);
+};
+
+module.exports = { listItems, createItem, getItemById, updateItem };

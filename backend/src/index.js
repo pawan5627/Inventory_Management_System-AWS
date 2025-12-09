@@ -14,6 +14,7 @@ const categoryRoutes = require("./routes/categoryRoutes");
 const itemRoutes = require("./routes/itemRoutes");
 const departmentRoutes = require("./routes/departmentRoutes");
 const companyRoutes = require("./routes/companyRoutes");
+const profileRoutes = require("./routes/profileRoutes");
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/items", itemRoutes);
 app.use("/api/departments", departmentRoutes);
 app.use("/api/companies", companyRoutes);
+app.use("/api/profile", profileRoutes);
 
 // Health check for ALB Target Group
 app.get("/api/health", (req, res) => {

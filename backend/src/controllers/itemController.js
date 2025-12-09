@@ -18,4 +18,16 @@ const createItem = async (req, res) => {
   }
 };
 
-module.exports = { listItems, createItem };
+const updateItem = async (req, res) => {
+  try {
+    const updated = await itemService.updateItem(req.params.id, req.body);
+    if (!updated) {
+      return res.status(404).json({ message: 'Item not found' });
+    }
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Failed to update item' });
+  }
+};
+
+module.exports = { listItems, createItem, updateItem };
