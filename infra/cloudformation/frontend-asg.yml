@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Frontend ASG serving React build via Nginx
+Parameters:
+  Env:
+    Type: String
+    Default: ims
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PrivateSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  SecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  TargetGroupArn:
+    Type: String
+  AMI:
+    Type: AWS::EC2::Image::Id
+  InstanceType:
+    Type: String
+    Default: t3.micro
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+  RepositoryUrl:
+    Type: String
+    Default: https://github.com/pawan5627/Inventory_Management_System-AWS.git
+  ViteApiBase:
+    Type: String
+    Default: https://api.example.com
+
+Resources:
+  FrontendLT:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub '${Env}-frontend-lt'
+      LaunchTemplateData:
+        ImageId: !Ref AMI
+        InstanceType: !Ref InstanceType
+        KeyName: !Ref KeyName
+        SecurityGroupIds:
+          - !Ref SecurityGroupId
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            set -e
+            sudo yum update -y
+            sudo yum install -y git nginx nodejs
+            sudo mkdir -p /opt/app
+            cd /opt/app
+            sudo git clone ${RepositoryUrl} .
+            cd frontend
+            echo "VITE_API_BASE=${ViteApiBase}" | sudo tee -a .env
+            sudo npm install --omit=dev
+            sudo npm run build
+            cat << 'EOF' | sudo tee /etc/nginx/conf.d/frontend.conf
+            server {
+                listen 80 default_server;
+                server_name _;
+                root /opt/app/frontend/dist;
+                index index.html;
+                location / { try_files $uri $uri/ /index.html; }
+            }
+            EOF
+            sudo systemctl enable nginx
+            sudo systemctl restart nginx
+
+  FrontendASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier: !Ref PrivateSubnets
+      DesiredCapacity: 2
+      MinSize: 2
+      MaxSize: 4
+      LaunchTemplate:
+        LaunchTemplateId: !Ref FrontendLT
+        Version: !GetAtt FrontendLT.LatestVersionNumber
+      TargetGroupARNs:
+        - !Ref TargetGroupArn
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 120
+
+Outputs:
+  FrontendASGName:
+    Value: !Ref FrontendASG

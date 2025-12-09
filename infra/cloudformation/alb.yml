@@ -1,0 +1,115 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Frontend and Backend ALBs with HTTPS
+Parameters:
+  Env:
+    Type: String
+    Default: ims
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PublicSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  FrontendCertArn:
+    Type: String
+  BackendCertArn:
+    Type: String
+
+Resources:
+  FrontendALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub '${Env}-frontend-alb'
+      Scheme: internet-facing
+      Subnets: !Ref PublicSubnets
+      SecurityGroups: []
+      Type: application
+  FrontendTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${Env}-frontend-tg'
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      TargetType: instance
+      HealthCheckPath: /
+  FrontendListener443:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref FrontendALB
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref FrontendCertArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref FrontendTG
+  FrontendListener80:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref FrontendALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: '443'
+            StatusCode: HTTP_301
+
+  BackendALB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub '${Env}-backend-alb'
+      Scheme: internet-facing
+      Subnets: !Ref PublicSubnets
+      SecurityGroups: []
+      Type: application
+  BackendTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub '${Env}-backend-tg'
+      Port: 80
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+      TargetType: instance
+      HealthCheckPath: /
+  BackendListener443:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref BackendALB
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Ref BackendCertArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref BackendTG
+  BackendListener80:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref BackendALB
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: redirect
+          RedirectConfig:
+            Protocol: HTTPS
+            Port: '443'
+            StatusCode: HTTP_301
+
+Outputs:
+  FrontendALBDNS:
+    Value: !GetAtt FrontendALB.DNSName
+    Export:
+      Name: !Sub '${Env}-FrontendALBDNS'
+  BackendALBDNS:
+    Value: !GetAtt BackendALB.DNSName
+    Export:
+      Name: !Sub '${Env}-BackendALBDNS'
+  FrontendTargetGroupArn:
+    Value: !Ref FrontendTG
+    Export:
+      Name: !Sub '${Env}-FrontendTGArn'
+  BackendTargetGroupArn:
+    Value: !Ref BackendTG
+    Export:
+      Name: !Sub '${Env}-BackendTGArn'

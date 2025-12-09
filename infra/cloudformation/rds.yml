@@ -1,0 +1,70 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: RDS PostgreSQL in private subnets
+Parameters:
+  Env:
+    Type: String
+    Default: ims
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  PrivateSubnets:
+    Type: List<AWS::EC2::Subnet::Id>
+  DBName:
+    Type: String
+    Default: inventory_db
+  DBUser:
+    Type: String
+  DBPassword:
+    Type: String
+    NoEcho: true
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.micro
+  AllocatedStorage:
+    Type: Number
+    Default: 20
+
+Resources:
+  RDSSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: RDS access from backend SG
+      VpcId: !Ref VpcId
+      SecurityGroupIngress: []
+      Tags:
+        - Key: Name
+          Value: !Sub '${Env}-rds-sg'
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Private subnets for RDS
+      SubnetIds: !Ref PrivateSubnets
+      DBSubnetGroupName: !Sub '${Env}-db-subnet-group'
+
+  PostgresDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName: !Ref DBName
+      Engine: postgres
+      MasterUsername: !Ref DBUser
+      MasterUserPassword: !Ref DBPassword
+      DBInstanceClass: !Ref DBInstanceClass
+      AllocatedStorage: !Ref AllocatedStorage
+      VPCSecurityGroups:
+        - !Ref RDSSecurityGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      PubliclyAccessible: false
+      MultiAZ: false
+      StorageType: gp2
+      DeletionProtection: false
+      BackupRetentionPeriod: 3
+
+Outputs:
+  DBEndpoint:
+    Value: !GetAtt PostgresDB.Endpoint.Address
+    Export:
+      Name: !Sub '${Env}-DBEndpoint'
+  DBSecGroup:
+    Value: !Ref RDSSecurityGroup
+    Export:
+      Name: !Sub '${Env}-DBSecGroup'

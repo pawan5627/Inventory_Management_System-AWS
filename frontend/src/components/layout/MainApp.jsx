@@ -1,34 +1,106 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { authGet, withUnauthorizedHandler } from '../../apiClient';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import Dashboard from '../dashboard/Dashboard';
 import SystemStatus from '../dashboard/SystemStatus';
 import ItemManagement from '../inventory/ItemManagement';
 import UserManagement from '../users/UserManagement';
+import Profile from '../profile/Profile';
 import { BarChart3 } from 'lucide-react';
 
 export default function MainApp({ onLogout }) {
   const [activeView, setActiveView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [notifications] = useState(3);
+  const [notifications, setNotifications] = useState([]);
+  const [dismissedNotifs, setDismissedNotifs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('dismissedNotifications') || '[]'); } catch { return []; }
+  });
 
   // Sample data for products/items
-  const [products, setProducts] = useState([
-    { id: 1, name: 'Wireless Mouse', sku: 'WM-001', category: 'Electronics', stock: 145, reorderPoint: 50, price: 29.99, status: 'In Stock', lastUpdated: '2024-11-20' },
-    { id: 2, name: 'USB-C Cable', sku: 'UC-002', category: 'Electronics', stock: 42, reorderPoint: 50, price: 12.99, status: 'Low Stock', lastUpdated: '2024-11-19' },
-    { id: 3, name: 'Notebook A5', sku: 'NB-003', category: 'Stationery', stock: 0, reorderPoint: 100, price: 8.99, status: 'Out of Stock', lastUpdated: '2024-11-21' },
-    { id: 4, name: 'Desk Lamp', sku: 'DL-004', category: 'Furniture', stock: 67, reorderPoint: 20, price: 45.99, status: 'In Stock', lastUpdated: '2024-11-18' },
-    { id: 5, name: 'Coffee Maker', sku: 'CM-005', category: 'Appliances', stock: 23, reorderPoint: 10, price: 89.99, status: 'In Stock', lastUpdated: '2024-11-20' },
-  ]);
+  const [products, setProducts] = useState([]);
+
+  // Fetch live items from backend with polling and 401 handling
+  useEffect(() => {
+    let cancelled = false;
+    const client = withUnauthorizedHandler(() => onLogout?.());
+    const fetchItems = async () => {
+      try {
+        const items = await client.get('/api/items');
+        if (!cancelled) setProducts(items || []);
+      } catch (e) {
+        if (e.status !== 401) console.warn('Failed to fetch items', e);
+      }
+    };
+    fetchItems();
+    const interval = setInterval(fetchItems, 30000); // 30s polling
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [onLogout]);
+  
+  // Build notifications from products (low/out of stock) and exclude dismissed
+  useEffect(() => {
+    const notes = [];
+    for (const p of products) {
+      if (p.stock === 0 || (p.status || '').toLowerCase() === 'out of stock') {
+        notes.push({ id: `stock-${p.id}-out`, type: 'critical', message: `Out of stock: ${p.name}`, productId: p.id });
+      } else if (p.stock < p.reorderPoint || (p.status || '').toLowerCase() === 'low stock') {
+        notes.push({ id: `stock-${p.id}-low`, type: 'warning', message: `Low stock: ${p.name} (${p.stock})`, productId: p.id });
+      }
+    }
+    const filtered = notes.filter(n => !dismissedNotifs.includes(n.id));
+    setNotifications(filtered);
+  }, [products, dismissedNotifs]);
+
+  const dismissNotification = (id) => {
+    setDismissedNotifs(prev => {
+      const next = Array.from(new Set([...(prev || []), id]));
+      localStorage.setItem('dismissedNotifications', JSON.stringify(next));
+      return next;
+    });
+  };
 
   // Sample data for users
-  const [users] = useState([
-    { id: 1, name: 'John Doe', email: 'john@example.com', role: 'Admin', department: 'IT', company: 'Tech Corp', status: 'Active', lastLogin: '2024-11-21 09:30' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Manager', department: 'Sales', company: 'Tech Corp', status: 'Active', lastLogin: '2024-11-21 08:15' },
-    { id: 3, name: 'Bob Johnson', email: 'bob@example.com', role: 'User', department: 'HR', company: 'Tech Corp', status: 'Inactive', lastLogin: '2024-11-19 14:20' },
-    { id: 4, name: 'Alice Brown', email: 'alice@example.com', role: 'Manager', department: 'Finance', company: 'Tech Corp', status: 'Active', lastLogin: '2024-11-20 16:45' },
-  ]);
+  const [users, setUsers] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [companies, setCompanies] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const client = withUnauthorizedHandler(() => onLogout?.());
+    const fetchUsers = async () => {
+      try {
+        const data = await client.get('/api/users');
+        if (!cancelled) setUsers(data || []);
+      } catch (e) {
+        if (e.status !== 401) console.warn('Failed to fetch users', e);
+      }
+    };
+    fetchUsers();
+    const interval = setInterval(fetchUsers, 60000); // 60s polling
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [onLogout]);
+
+  // Fetch departments and companies for dashboard quick stats
+  useEffect(() => {
+    let cancelled = false;
+    const client = withUnauthorizedHandler(() => onLogout?.());
+    const fetchMeta = async () => {
+      try {
+        const d = await client.get('/api/departments');
+        const c = await client.get('/api/companies');
+        if (!cancelled) {
+          setDepartments(d || []);
+          setCompanies(c || []);
+        }
+      } catch (e) {
+        if (e.status !== 401) console.warn('Failed to fetch departments/companies', e);
+      }
+    };
+    fetchMeta();
+    const interval = setInterval(fetchMeta, 60000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [onLogout]);
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
@@ -46,12 +118,28 @@ export default function MainApp({ onLogout }) {
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           notifications={notifications}
+          onDismissNotification={dismissNotification}
+          onLogout={onLogout}
+          setActiveView={setActiveView}
         />
         
-        {activeView === 'dashboard' && <Dashboard products={products} users={users} />}
+        {activeView === 'dashboard' && <Dashboard products={products} users={users} departments={departments} companies={companies} />}
         {activeView === 'system-status' && <SystemStatus />}
         {activeView === 'items' && <ItemManagement products={products} setProducts={setProducts} searchTerm={searchTerm} />}
         {activeView === 'user-management' && <UserManagement />}
+        {activeView === 'profile' && (
+          <Profile initialUser={(function(){
+            try {
+              const raw = localStorage.getItem('user');
+              if (!raw) return { firstName: 'Admin', lastName: '', email: 'admin@example.com' };
+              const u = JSON.parse(raw);
+              const name = (u.name || '').split(' ');
+              return { firstName: name[0] || 'Admin', lastName: name[1] || '', email: u.email || 'admin@example.com' };
+            } catch {
+              return { firstName: 'Admin', lastName: '', email: 'admin@example.com' };
+            }
+          })()} />
+        )}
         {activeView === 'reports' && (
           <div className="p-6">
             <div className="bg-white rounded-lg shadow p-8 text-center">
