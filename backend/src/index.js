@@ -19,6 +19,8 @@ const app = express();
 
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || '*';
 app.use(cors({ origin: FRONTEND_ORIGIN, credentials: true }));
+// Explicitly handle CORS preflight for all routes
+app.options('*', cors({ origin: FRONTEND_ORIGIN, credentials: true }));
 app.use(express.json());
 app.use(morgan("dev"));
 
