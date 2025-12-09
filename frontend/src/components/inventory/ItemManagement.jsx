@@ -35,7 +35,7 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
     (async () => {
       try {
         const list = await authGet('/api/categories');
-        const mapped = (list || []).map(c => ({ name: c.name, description: c.description, status: c.status }));
+        const mapped = (list || []).map(c => ({ id: c.id, name: c.name, description: c.description, status: c.status }));
         if (!cancelled) setCategories(mapped);
       } catch (e) {
         console.warn('Failed categories fetch', e);
@@ -46,6 +46,7 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
 
   const filterCategories = ['all', ...categories.map(c => c.name)];
   const categoryRows = categories.map(c => ({
+    id: c.id,
     name: c.name,
     description: c.description,
     itemsCount: products.filter(p => p.category === c.name).length,
@@ -67,11 +68,20 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
 
   
 
-  const handleDeleteProduct = (id) => {
+  const handleDeleteProduct = async (id) => {
     const p = products.find(x => x.id === id);
     if (!p) return;
     if (window.confirm(`Set item "${p.name}" inactive?`)) {
-      setProducts(products.map(x => x.id === id ? { ...x, status: 'Inactive' } : x));
+      try {
+        // Update status to Inactive in backend
+        const { authPut } = await import('../../apiClient');
+        await authPut(`/api/items/${id}`, { status: 'Inactive' });
+        // Update local state
+        setProducts(products.map(x => x.id === id ? { ...x, status: 'Inactive' } : x));
+      } catch (error) {
+        console.error('Failed to update item status:', error);
+        alert('Failed to update item status. Please try again.');
+      }
     }
   };
 
@@ -271,16 +281,23 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
                           <Eye className="w-4 h-4 text-gray-600" />
                         </button>
                         <button className="p-1 hover:bg-gray-100 rounded" title="Edit category" onClick={() => {
-                          const existing = categories.find(c => c.name === cat.name);
+                          const existing = categories.find(c => c.id === cat.id);
                           setShowAddCategory(true);
                           // pass editCategory via onSave closure by setting a ref-like state
                           setPendingEditCategory(existing);
                         }}>
                           <Edit2 className="w-4 h-4 text-blue-600" />
                         </button>
-                        <button className="p-1 hover:bg-gray-100 rounded" title="Delete category" onClick={() => {
+                        <button className="p-1 hover:bg-gray-100 rounded" title="Delete category" onClick={async () => {
                           if (window.confirm(`Set category \"${cat.name}\" inactive?`)) {
-                            setCategories(prev => prev.map(c => c.name === cat.name ? { ...c, status: 'Inactive' } : c));
+                            try {
+                              const { authPut } = await import('../../apiClient');
+                              await authPut(`/api/categories/${cat.id}`, { status: 'Inactive' });
+                              setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, status: 'Inactive' } : c));
+                            } catch (error) {
+                              console.error('Failed to update category status:', error);
+                              alert('Failed to update category status. Please try again.');
+                            }
                           }
                         }}>
                           <Trash2 className="w-4 h-4 text-red-600" />

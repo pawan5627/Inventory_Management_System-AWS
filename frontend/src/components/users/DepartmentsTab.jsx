@@ -15,11 +15,18 @@ export default function DepartmentsTab({ departments, setDepartments }) {
     return status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
   };
 
-  const handleDeleteDepartment = (id) => {
+  const handleDeleteDepartment = async (id) => {
     const dept = departments.find(d => d.id === id);
     if (!dept) return;
     if (!confirm(`Set department "${dept.name}" inactive?`)) return;
-    setDepartments(departments.map(d => d.id === id ? { ...d, status: 'Inactive' } : d));
+    try {
+      const { authPut } = await import('../../apiClient');
+      await authPut(`/api/departments/${id}`, { status: 'Inactive' });
+      setDepartments(departments.map(d => d.id === id ? { ...d, status: 'Inactive' } : d));
+    } catch (error) {
+      console.error('Failed to update department status:', error);
+      alert('Failed to update department status. Please try again.');
+    }
   };
 
   return (

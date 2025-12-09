@@ -23,11 +23,18 @@ export default function UsersTab({ users, setUsers }) {
     return status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
   };
 
-  const handleDeleteUser = (id) => {
+  const handleDeleteUser = async (id) => {
     const u = users.find(x => x.id === id);
     if (!u) return;
-    if (window.confirm(`Set user "${u.name}" inactive?`)) {
-      setUsers(users.map(x => x.id === id ? { ...x, status: 'Inactive' } : x));
+    if (window.confirm(`Set user "${u.name || u.username}" inactive?`)) {
+      try {
+        const { authPut } = await import('../../apiClient');
+        await authPut(`/api/users/${id}`, { status: 'Inactive' });
+        setUsers(users.map(x => x.id === id ? { ...x, status: 'Inactive' } : x));
+      } catch (error) {
+        console.error('Failed to update user status:', error);
+        alert('Failed to update user status. Please try again.');
+      }
     }
   };
 
