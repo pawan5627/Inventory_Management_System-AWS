@@ -28,9 +28,10 @@ const connectDB = async () => {
         try {
           const fs = require('fs');
           const path = require('path');
-          const resolved = caPath.startsWith('~')
-            ? path.join(process.env.HOME || process.env.USERPROFILE || '', caPath.slice(1))
-            : path.resolve(caPath);
+          const home = process.env.HOME || process.env.USERPROFILE || '';
+          const resolved = caPath === '~'
+            ? home
+            : (caPath.startsWith('~/') ? path.join(home, caPath.slice(2)) : path.resolve(caPath));
           const ca = fs.readFileSync(resolved, 'utf8');
           ssl = { ca, rejectUnauthorized, servername: sslServername };
         } catch (e) {
