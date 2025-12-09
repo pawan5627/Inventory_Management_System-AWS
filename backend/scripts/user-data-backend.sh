@@ -56,8 +56,8 @@ EOF
 sudo curl -fsSL -o /opt/app/backend/rds-ca.pem https://truststore.pki.rds.amazonaws.com/us-east-1/us-east-1-bundle.pem
 sudo chmod 0644 /opt/app/backend/rds-ca.pem
 
-# Start API with PM2
-pm2 start /opt/app/backend/src/index.js --name inventory-api --time
+# Start API with PM2 (explicit cwd so node resolves local node_modules)
+pm2 start src/index.js --name inventory-api --time --cwd /opt/app/backend
 pm2 save
 
 # Nginx reverse proxy

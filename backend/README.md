@@ -79,4 +79,10 @@ Attach `Authorization: Bearer <JWT>` for protected endpoints.
 	- Restart app after env changes: `pm2 restart inventory-api --update-env`.
 
 ### Launch Template user data
-- Use `backend/scripts/user-data-backend.sh` to bootstrap EC2 instances (Node, PM2, Nginx, repo clone, CA bundle, `.env`). Update `.env` values via LT or SSM parameters.
+- Use `backend/scripts/user-data-backend.sh` to bootstrap EC2 instances (Node, PM2, Nginx, repo clone, CA bundle, `.env`). It:
+	- Installs dependencies and runs `npm ci` before starting.
+	- Starts PM2 with `--cwd /opt/app/backend` so Node resolves local `node_modules`.
+	- Writes `RDS_SSL_CA_PATH` as an absolute path `/opt/app/backend/rds-ca.pem` (no `~`).
+	- Optionally supports `RDS_SSL_SERVERNAME` to match RDS certificate SNI.
+	- Configures Nginx to proxy `/:80 -> 127.0.0.1:4000`.
+	Update `.env` values via LT or SSM parameters.
