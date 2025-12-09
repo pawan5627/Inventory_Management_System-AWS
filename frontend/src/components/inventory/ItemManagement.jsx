@@ -46,6 +46,7 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
 
   const filterCategories = ['all', ...categories.map(c => c.name)];
   const categoryRows = categories.map(c => ({
+    id: c.id,
     name: c.name,
     description: c.description,
     itemsCount: products.filter(p => p.category === c.name).length,
@@ -280,7 +281,7 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
                           <Eye className="w-4 h-4 text-gray-600" />
                         </button>
                         <button className="p-1 hover:bg-gray-100 rounded" title="Edit category" onClick={() => {
-                          const existing = categories.find(c => c.name === cat.name);
+                          const existing = categories.find(c => c.id === cat.id);
                           setShowAddCategory(true);
                           // pass editCategory via onSave closure by setting a ref-like state
                           setPendingEditCategory(existing);
@@ -291,12 +292,8 @@ export default function ItemManagement({ products, setProducts, searchTerm }) {
                           if (window.confirm(`Set category \"${cat.name}\" inactive?`)) {
                             try {
                               const { authPut } = await import('../../apiClient');
-                              // Find category ID to update
-                              const existing = categories.find(c => c.name === cat.name);
-                              if (existing && existing.id) {
-                                await authPut(`/api/categories/${existing.id}`, { status: 'Inactive' });
-                              }
-                              setCategories(prev => prev.map(c => c.name === cat.name ? { ...c, status: 'Inactive' } : c));
+                              await authPut(`/api/categories/${cat.id}`, { status: 'Inactive' });
+                              setCategories(prev => prev.map(c => c.id === cat.id ? { ...c, status: 'Inactive' } : c));
                             } catch (error) {
                               console.error('Failed to update category status:', error);
                               alert('Failed to update category status. Please try again.');

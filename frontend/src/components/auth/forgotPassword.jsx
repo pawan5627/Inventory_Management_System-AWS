@@ -26,9 +26,8 @@ export default function ForgotPassword({ onNavigate }) {
     setError('');
     try {
       const response = await apiPost('/api/auth/forgot-password', { email }, false);
-      console.log('Password reset response:', response);
-      // Log the reset link for testing (remove in production)
-      if (response.resetLink) {
+      // Log the reset link for testing in development only
+      if (import.meta.env.DEV && response.resetLink) {
         console.log('Password reset link:', response.resetLink);
       }
       setIsSuccess(true);

@@ -67,7 +67,7 @@ const signup = async ({ username, email, password, firstName, lastName, employee
   }
 
   // Generate username from email if not provided
-  const finalUsername = username || email.split('@')[0];
+  const finalUsername = username?.trim() || email.split('@')[0];
   const name = firstName ? `${firstName}${lastName ? ' ' + lastName : ''}` : null;
 
   // Create user
@@ -125,7 +125,6 @@ const forgotPassword = async (email) => {
   // In production, this should trigger an email service
   return { 
     resetToken, 
-    userId: user.id,
     message: "If an account with that email exists, a password reset link has been sent."
   };
 };
